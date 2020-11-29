@@ -25,17 +25,17 @@ struct Queue *InitializeQueue()
     // TODO: implement
 }
 
-struct Message *Top(struct Queue *p_queue)
+struct Task *Top(struct Queue *p_queue)
 {
     // TODO: implement
 }
 
-struct Message *Pop(struct Queue *p_queue)
+struct Task *Pop(struct Queue *p_queue)
 {
     // TODO: implement
 }
 
-void Push(struct Queue *p_queue, struct Message *p_message)
+void Push(struct Queue *p_queue, struct Task *p_task)
 {
     // TODO: implement
 }

@@ -36,15 +36,15 @@
  ******************************************************************************
  */
 
-struct Message
+struct Task
 {
-    struct Message *next;
+    struct Task *next;
 };
 
 struct Queue
 {
-    struct Message *head;
-    struct Message *tail;
+    struct Task *head;
+    struct Task *tail;
 };
 
 
@@ -56,11 +56,11 @@ struct Queue
 
 struct Queue *InitializeQueue();
 
-struct Message *Top(struct Queue *p_queue);
+struct Task *Top(struct Queue *p_queue);
 
-struct Message *Pop(struct Queue *p_queue);
+struct Task *Pop(struct Queue *p_queue);
 
-void Push(struct Queue *p_queue, struct Message *p_message);
+void Push(struct Queue *p_queue, struct Task *p_task);
 
 bool Empty(struct Queue *p_queue);
 
