@@ -20,6 +20,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 /*
@@ -35,6 +36,16 @@
  ******************************************************************************
  */
 
+struct Message
+{
+    struct Message *next;
+};
+
+struct Queue
+{
+    struct Message *head;
+    struct Message *tail;
+};
 
 
 /*
@@ -42,6 +53,18 @@
  * DECLARATIONS
  ******************************************************************************
  */
+
+struct Queue *InitializeQueue();
+
+struct Message *Top(struct Queue *p_queue);
+
+struct Message *Pop(struct Queue *p_queue);
+
+void Push(struct Queue *p_queue, struct Message *p_message);
+
+bool Empty(struct Queue *p_queue);
+
+void DestroyQueue(struct Queue *p_queue);
 
 /**
  ******************************************************************************

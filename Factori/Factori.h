@@ -1,16 +1,16 @@
 /**
- * Lock.h
+ * Factori.h
  * Factori Project
  * ISP_HW_3_2020
  *
- * 
+ *
  *
  * by: Chaim Gruda
  *     Nir Beiber
  */
 
-#ifndef __LOCK_H__
-#define __LOCK_H__
+#ifndef __FACTORI_H__
+#define __FACTORI_H__
 
 /*
  ******************************************************************************
@@ -29,16 +29,12 @@
  */
 
 
- /*
+/*
  ******************************************************************************
  * STRUCTURES
  ******************************************************************************
  */
 
-struct Lock
-{
-    // implement
-};
 
 
 /*
@@ -47,17 +43,7 @@ struct Lock
  ******************************************************************************
  */
 
-struct Lock *InitializeLock();
 
-void read_lock(struct Lock *p_lock);
-
-void read_release(struct Lock *p_lock);
-
-void write_lock(struct Lock *p_lock);
-
-void write_release(struct Lock *p_lock);
-
-void DestroyLock(struct Lock *p_lock);
 
 /**
  ******************************************************************************
@@ -69,4 +55,4 @@ void DestroyLock(struct Lock *p_lock);
  */
 
 
-#endif // __LOCK_H__
+#endif // __FACTORI_H__
