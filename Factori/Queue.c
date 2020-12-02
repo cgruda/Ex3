@@ -20,6 +20,12 @@
  * FUNCTION DEFENITIONS
  ******************************************************************************
  */
+
+struct Task *InitializeTask()
+{
+
+}
+
 struct Queue *InitializeQueue()
 {
     // TODO: implement
@@ -48,4 +54,6 @@ bool Empty(struct Queue *p_queue)
 void DestroyQueue(struct Queue *p_queue)
 {
     // TODO: implement
+
+    p_queue = NULL;
 }

@@ -39,12 +39,14 @@
 struct Task
 {
     struct Task *next;
+    int line;
 };
 
 struct Queue
 {
     struct Task *head;
     struct Task *tail;
+    int cnt;
 };
 
 
