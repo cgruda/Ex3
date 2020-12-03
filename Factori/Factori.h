@@ -44,6 +44,7 @@
  */
 
 
+DWORD WINAPI factori_thread(LPVOID param);
 
 
 

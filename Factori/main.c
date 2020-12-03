@@ -12,7 +12,7 @@
  * INCLUDES
  ******************************************************************************
  */
-
+#include "tasks.h"
 
 /*
  ******************************************************************************
@@ -27,10 +27,15 @@ int main(int argc, char **argv)
     // argv[2] - "priority input file"
     // argv[3] - "num" (number of lines in files)
     // argv[4] - "num" (number of threads)
-
+    int ret_val;
+    struct args args;
     struct Queue *q;
 
-    // init() - check input
+    ret_val = init(&args, argc, argv);
+    if (ret_val == ERR)
+    {
+        return ERR;
+    }
 
     // fill queue
 
@@ -38,5 +43,6 @@ int main(int argc, char **argv)
 
     // end
 
+    // this is a test commit 2
     return 0;
 }

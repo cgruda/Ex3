@@ -3,165 +3,215 @@
  * Factori Project
  * ISP_HW_3_2020
  *
- *
+ * this module solves the readers-writer sync problem,
+ * allowing concurrent read access, but exclusive write access.
+ * the solution is based on Michel Raynal (1949) solution,
+ * which uses 2 mutexs and a counter. since WinAPI does not
+ * allow a mutex acquired by one thread to be released by another,
+ * the "global" mutex is implemented by a binari semaphore.
+ * 
  * by: Chaim Gruda
  *     Nir Beiber
  */
 
 /*
- ******************************************************************************
+ ==============================================================================
  * INCLUDES
- ******************************************************************************
+ ==============================================================================
  */
 #include "Lock.h"
 #include "tasks.h"
 
 /*
- ******************************************************************************
+ ==============================================================================
  * FUNCTION DEFENITIONS
- ******************************************************************************
+ ==============================================================================
  */
 struct Lock *InitializeLock()
 {
     struct Lock *p_lock = NULL;
-    int status = OK;
+    int    status       = OK;
 
-    // allocate lock
+    // allocate lock mem
     p_lock = calloc(1, sizeof(*p_lock));
-    ASSERT_RETURN_VAL(p_lock, NULL);
-
-    // mutex handle
-    p_lock->h_write_mtx = CreateMutex(NULL, FALSE, MUTX_NAME);
-    if (!p_lock->h_write_mtx)
+    if (!p_lock)
     {
+        PRINT_ERROR(E_STDLIB, 0);
+        return ERR;
+    }
+
+    // create readers mutex
+    p_lock->h_read_mtx = CreateMutexA(NULL, FALSE, MUTX_R);
+    if (!p_lock->h_read_mtx)
+    {
+        PRINT_ERROR(E_WINAPI, 0);
         status = ERR;
     }
 
-    // semaphore handle
-    p_lock->h_read_smpr = CreateSemaphore(NULL, 0, MAXIMUM_WAIT_OBJECTS, SMPR_NAME);
-    if (!p_lock->h_read_smpr)
+    // create global (binari) semaphore handle
+    p_lock->h_global_smpr = CreateSemaphoreA(NULL, 0, 1, SMPR_G);
+    if (!p_lock->h_global_smpr)
     {
+        PRINT_ERROR(E_WINAPI, 0);
         status = ERR;
     }
 
-    // incase create handle failed
+    // in case a handle creation failed
     if (status != OK)
     {
-        ASSERT_PRINT(0);
         DestroyLock(p_lock);
     }
 
     return p_lock;
 }
 
-// aloow other read. dont allow write
+//==============================================================================
+
 int read_lock(struct Lock *p_lock)
 {
-    ASSERT_RETURN_VAL(p_lock, ERR);
-
-    int ret_val = OK;
     DWORD wait_code;
 
-    // make sure no write_lock
-    wait_code = WaitForSingleObject(p_lock->h_write_mtx, MAX_WAIT_MS_R);
-    if (wait_code != WAIT_OBJECT_0)
+    // sanity
+    if (!p_lock)
     {
-        ASSERT_RETURN_VAL(0, ERR_TIMOUT);
+        PRINT_ERROR(E_INTERNAL, E_MSG_NULL_PTR);
+        return ERR;
     }
 
-    // increase semaphore by 1, indicating caller IS reading
-    if (!ReleaseSemaphore(p_lock->h_read_smpr, 1, &p_lock->smpr_cnt))
+    // ask for readers mutex, so thread can be added to readers_count
+    wait_code = WaitForSingleObject(p_lock->h_read_mtx, MAX_WAIT_MS_R);
+    LOCK_WAIT_CODE_CHECK(wait_code);
+
+    p_lock->readers_count++;
+
+    // only the FIRST reader locks global, not alowing others to write
+    if (p_lock->readers_count == 1)
     {
-        ret_val = ERR;
+        wait_code = WaitForSingleObject(p_lock->h_global_smpr, MAX_WAIT_MS_R);
+        LOCK_WAIT_CODE_CHECK(wait_code);
     }
 
-    // semaphore disables write, allow other threads increase semaphore
-    if(!ReleaseMutex(p_lock->h_write_mtx))
+    // release readers mutx, allowing others to start read
+    if(!ReleaseMutex(p_lock->h_read_mtx))
     {
-        ret_val = ERR;
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
     }
-    // if not locked for WRITE - SUCCESS
-    // if locked due to WRITE - WAIT
-    // if timeout - FAIL, else SUCCESS
-    
-    // each reader increase smpr by 1 (by wait)
-    // if mutex is not locked (i.e. no writing is in progress) - increase smpr (by calling release smpr)
-    //        (also increase smpr counter)
-    // if mutex is locked lock for reading fails
-    ASSERT_PRINT(ret_val == OK);
 
-    return ret_val;
+    return OK;
 }
+
+//==============================================================================
 
 int read_release(struct Lock *p_lock)
 {
-    ASSERT_RETURN_VAL(p_lock, ERR);
+    DWORD wait_code;
 
-    // use a h_read_smpr. when seam=0: no one is reading
-    // 
-    // if mutex is on then we shouldent be here - sanity
-    // decrease the seamaphore by one by calling wait(0). update smpr_count
+    // sanity
+    if (!p_lock)
+    {
+        PRINT_ERROR(E_INTERNAL, E_MSG_NULL_PTR);
+        return ERR;
+    }
+
+    // ask for readers mutex, so thread can decrement readers_counter
+    wait_code = WaitForSingleObject(p_lock->h_read_mtx, MAX_WAIT_MS_R);
+    LOCK_WAIT_CODE_CHECK(wait_code);
+
+    p_lock->readers_count--;
+
+    // only the LAST reader releases global, allowing others to write
+    if (p_lock->readers_count == 0)
+    {
+        if(!ReleaseSemaphore(p_lock->h_global_smpr, 1, NULL))
+        {
+            PRINT_ERROR(E_WINAPI, 0);
+            return ERR;
+        }
+    }
+
+    // release readers mutex, allowing others to update readers_count
+    if(!ReleaseMutex(p_lock->h_read_mtx))
+    {
+        return ERR;
+    }
+
+    return OK;
 }
+
+//==============================================================================
 
 int write_lock(struct Lock *p_lock)
 {
-    ASSERT_RETURN_VAL(p_lock, ERR);
-
     DWORD wait_code;
-    // no one else locked for write - SUCCESS 
-    // no one else locked for read  - SUCCESS
-    // else - WAIT
-    // return only when managed to lock. so there is no FAIL really. only wait enough time
 
-    // check no read_lock
-    while (p_lock->smpr_cnt != 0);
+    // sanity
+    if (!p_lock)
+    {
+        PRINT_ERROR(E_INTERNAL, E_MSG_NULL_PTR);
+        return ERR;
+    }
 
-    // check no write_lock
-    wait_code = WaitForSingleObject(p_lock->h_write_mtx, MAX_WAIT_MS_W);
+    // wait for global semaphore, that will grant exclusive writing
+    wait_code = WaitForSingleObject(p_lock->h_global_smpr, MAX_WAIT_MS_R);
+    LOCK_WAIT_CODE_CHECK(wait_code);
 
-    // if smpr_count > 0 then somone is reading - FAIL
-    // else lock the mtx thus not alowing write - OK
+    return OK;
 }
+
+//==============================================================================
 
 int write_release(struct Lock *p_lock)
 {
-    ASSERT_RETURN_VAL(p_lock, ERR);
-
-    int ret_val = OK;
-
-    if (!ReleaseMutex(p_lock->h_write_mtx))
+    // sanity
+    if (!p_lock)
     {
-        ret_val = ERR;
+        PRINT_ERROR(E_INTERNAL, E_MSG_NULL_PTR);
+        return ERR;
     }
 
-    ASSERT_PRINT(ret_val == OK);
+    // release global semaphore, allowing others to get write or read access
+    if (!ReleaseSemaphore(p_lock->h_global_smpr, 1, NULL))
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
+    }
 
-    return ret_val;
+    return OK;
 }
+
+//==============================================================================
 
 int DestroyLock(struct Lock *p_lock)
 {
-    ASSERT_RETURN_VAL(p_lock, ERR);
-
     int ret_val = OK;
 
-    if (p_lock->h_write_mtx)
+    // sanity
+    if (!p_lock)
     {
-        if (!CloseHandle(p_lock->h_write_mtx))
-        {
-            ret_val = ERR;
-        }
+        PRINT_ERROR(E_INTERNAL, E_MSG_NULL_PTR);
+        return ERR;
     }
-    
-    if (p_lock->h_read_smpr)
+
+    // close mutex handler
+    if (p_lock->h_read_mtx)
     {
-        if (!CloseHandle(p_lock->h_read_smpr))
+        if (!CloseHandle(p_lock->h_read_mtx))
         {
+            PRINT_ERROR(E_WINAPI, 0);
             ret_val = ERR;
         }
     }
 
-    ASSERT_PRINT(ret_val == OK);
+    // close semaphore handler
+    if (p_lock->h_global_smpr)
+    {
+        if (!CloseHandle(p_lock->h_global_smpr))
+        {
+            PRINT_ERROR(E_WINAPI, 0);
+            ret_val = ERR;
+        }
+    }
 
     free(p_lock);
     p_lock = NULL;
