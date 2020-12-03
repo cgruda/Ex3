@@ -81,20 +81,6 @@ enum e_value
 #define E_MSG_NULL_PTR "Null Pointer\n"
 #define E_MSG_MAX_WAIT "Max Wait-time passed\n"
 
-#define WAIT_CODE_CHECK(wait_code)               \
-{                                                \
-    switch (wait_code)                           \
-    {                                            \
-    case WAIT_OBJECT_0:                          \
-        break;                                   \
-    case WAIT_FAILED:                            \
-        PRINT_ERROR(E_WINAPI, 0);                \
-        return ERR;                              \
-    default:                                     \
-        PRINT_ERROR(E_INTERNAL, E_MSG_MAX_WAIT); \
-        return ERR;                              \
-    }                                            \
-}
 
 
 /*
