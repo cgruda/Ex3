@@ -76,3 +76,36 @@ struct Queue *fill_queue(char *path)
 {
     
 }
+
+int* factori(int num) {
+    int i;
+    int pos = 0;
+    int* ptr, * new_ptr;
+    ptr = (int*)malloc(1 * sizeof(int));
+
+    while (num % 2 == 0) { //num is even
+        *(ptr + pos) = 2;
+        num = num / 2;
+        pos++;
+        new_ptr = (int*)realloc(ptr, (pos+1)*sizeof(int));
+        ptr = new_ptr;
+    }
+    for (i = 3; i < (num / 2); i = i + 2) { //num is odd
+        while (num % i == 0) {
+            *(ptr + pos) = i;
+            num = num / i;
+            pos++;
+            new_ptr = (int*)realloc(ptr, (pos+1)*sizeof(int));
+            ptr = new_ptr;
+        }
+    }
+    if (num > 2) { // num remaind is prime
+        *(ptr + pos) = num;
+        num = 1;
+        pos++;
+        new_ptr = (int*)realloc(ptr, (pos+1)*sizeof(int));
+        ptr = new_ptr;
+    }
+    *(ptr+pos) = 0; // null terminated array
+    return ptr;
+}
