@@ -40,6 +40,7 @@
 #define MIN2SEC         60
 #define MAX_WAIT_TIME_ALL_MS (10 * MIN2SEC * SEC2MS)
 #define WAIT_0_MS        0
+#define INT_LENGTH      32
 
 #define ERR 0
 #define OK  1
@@ -51,22 +52,9 @@
  ******************************************************************************
  */
 // debug stamp [file,function,line]
-#define DBG_STAMP()                 printf("[%s,%s,%d]", __FILENAME__, __func__, __LINE__)
+#define DBG_STAMP()     printf("[%s,%s,%d]", __FILENAME__, __func__, __LINE__)
 // debug print
-#define DBG_PRINT(...)              do {DBG_STAMP(); printf(__VA_ARGS__);} while (0)
-// print error message
-#define ASSERT_PRINT(ok)            do {if (!(ok)) {DBG_STAMP(); print_error();}} while (0)
-// print error and return
-#define ASSERT_RETURN(ok)           do {if (!(ok)) {ASSERT_PRINT(0); return;}} while (0)
-// print error and return value
-#define ASSERT_RETURN_VAL(ok, val)  do {if (!(ok)) {ASSERT_PRINT(0); return (val);}} while (0)
-// print error and break
-#define ASSERT_BREAK(ok)            do {if (!(ok)) {ASSERT_PRINT(0); break;}} while (0)
-// print error and continue
-#define ASSERT_CONTINUE(ok)         do {if (!(ok)) {ASSERT_PRINT(0); continue;}} while (0)
-// print error and exit
-#define ASSERT_EXIT_FAIL(ok)        do {if (!(ok)) {ASSERT_PRINT(0); exit(EXIT_FAILURE);}} while (0)
-
+#define DBG_PRINT(...)  do {DBG_STAMP(); printf(__VA_ARGS__);} while (0)
 
 enum e_value
 {
@@ -80,6 +68,7 @@ enum e_value
 #define PRINT_ERROR(err_val, err_msg)   do {DBG_STAMP(); print_error((err_val), (err_msg));} while (0)
 #define E_MSG_NULL_PTR "Null Pointer\n"
 #define E_MSG_MAX_WAIT "Max Wait-time passed\n"
+#define E_MSG_BUF_FULL "Buffer is full\n"
 
 
 
@@ -98,10 +87,11 @@ struct args
 
 struct thread_args
 {
-    char *path;
+    char  *path;
     struct Queue *p_queue;
     struct Lock  *p_lock;
-    HANDLE *abort_evt;
+    HANDLE *p_h_queue_mtx;
+    HANDLE *p_h_abort_evt;
 };
 
 /*

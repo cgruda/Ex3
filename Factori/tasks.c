@@ -24,11 +24,7 @@
  * FUNCTION DEFENITIONS
  ******************************************************************************
  */
-    // argv[0] - "Factori.exe"
-    // argv[1] - "tasks input file - and also output file"
-    // argv[2] - "priority input file"
-    // argv[3] - "num" (number of lines in files)
-    // argv[4] - "num" (number of threads)
+
 void print_usage()
 {
     printf("\nusage:\n\tfactori.exe [file-1] [file-2] [n] [m]\n\n"
@@ -145,36 +141,72 @@ struct Queue *fill_queue(char *path)
     
 }
 
-int* factori(int num) {
-    int i;
-    int pos = 0;
-    int* ptr, * new_ptr;
-    ptr = (int*)malloc(1 * sizeof(int)); // FIXME: error handling, use calloc
+int *factori(int num) 
+{
+    int  i, pos = 0;
+    int *ptr, *new_ptr;
 
-    while (num % 2 == 0) { //num is even
-        *(ptr + pos) = 2;
-        num = num / 2;
-        pos++;
-        new_ptr = (int*)realloc(ptr, (pos+1)*sizeof(int)); // FIXME: error handling
-        ptr = new_ptr; // FIXME: mem leak (must free ptr before re-assigning)
+    ptr = (int*)calloc(1, sizeof(*ptr));
+    if (!ptr)
+    {
+        PRINT_ERROR(E_STDLIB, 0);
+        return NULL;
     }
-    for (i = 3; i < (num / 2); i = i + 2) { //num is odd
-        while (num % i == 0) {
+
+    // num is even
+    while (num % 2 == 0)
+    {
+        *(ptr + pos) = 2;
+        num /= 2;
+        pos++;
+        new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
+        if (!ptr)
+        {
+            PRINT_ERROR(E_STDLIB, 0);
+            free(ptr);
+            return NULL;
+        }
+        ptr = new_ptr;
+    }
+
+    //num is odd
+    for (i = 3; i < (num / 2); i += 2)
+    {
+        while (num % i == 0)
+        {
             *(ptr + pos) = i;
-            num = num / i;
+            num /= i;
             pos++;
-            new_ptr = (int*)realloc(ptr, (pos+1)*sizeof(int)); // FIXME: error handling
-            ptr = new_ptr;// FIXME: mem leak (must free ptr before re-assigning)
+            new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
+            if (!ptr)
+            {
+                PRINT_ERROR(E_STDLIB, 0);
+                free(ptr);
+                return NULL;
+            }
+            ptr = new_ptr;
         }
     }
-    if (num > 2) { // num remaind is prime
+
+    // num remaind is prime
+    if (num > 2)
+    {
         *(ptr + pos) = num;
         num = 1;
         pos++;
-        new_ptr = (int*)realloc(ptr, (pos+1)*sizeof(int)); // FIXME: error handling
-        ptr = new_ptr;// FIXME: mem leak (must free ptr before re-assigning)
+        new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
+        if (!ptr)
+        {
+            PRINT_ERROR(E_STDLIB, 0);
+            free(ptr);
+            return NULL;
+        }
+        ptr = new_ptr;
     }
-    *(ptr+pos) = 0; // null terminated array
+    
+    // Null terminated array
+    *(ptr+pos) = 0;
+
     return ptr;
 }
 
@@ -191,7 +223,11 @@ int create_n_threads(LPTHREAD_START_ROUTINE thread_func, HANDLE *p_h_threads,
                                       args,
                                       0,
                                       NULL);
-        ASSERT_RETURN_VAL(p_h_threads[i], ERR);
+        if (!p_h_threads[i])
+        {
+            PRINT_ERROR(E_WINAPI, 0);
+            break;
+        }
 
         threads_created++;
     }
@@ -214,7 +250,7 @@ int wait_for_n_threads(HANDLE* p_h_threads, int n_threads)
 
     // wait for all threads to end
     wait_code = WaitForMultipleObjects(n_threads, p_h_threads, TRUE, MAX_WAIT_TIME_ALL_MS);
-    ASSERT_RETURN_VAL((wait_code != WAIT_FAILED), ERR);
+    // wait
 
     // not all ended on time
     if (wait_code != WAIT_OBJECT_0)

@@ -17,9 +17,7 @@
  * INCLUDES
  ******************************************************************************
  */
-#include <windows.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -28,7 +26,7 @@
  * DEFINES
  ******************************************************************************
  */
-
+#define QUEUE_POP_MAX_WAIT_MS   2000
 
  /*
  ******************************************************************************
@@ -39,7 +37,7 @@
 struct Task
 {
     struct Task *next;
-    int line;
+    int offset;
 };
 
 struct Queue
