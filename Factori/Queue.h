@@ -38,16 +38,18 @@
 
 struct Task
 {
-    struct Task *next;
-    int line;
+    struct Task* next;
+    int data;
 };
+typedef struct Task Task;
 
 struct Queue
 {
-    struct Task *head;
-    struct Task *tail;
+    struct Task* head;
+    struct Task* tail;
     int cnt;
 };
+typedef struct Queue Queue;
 
 
 /*

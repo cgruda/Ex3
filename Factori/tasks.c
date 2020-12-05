@@ -17,6 +17,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "tasks.h"
+#include "Queue.h"
 
 /*
  ******************************************************************************
@@ -108,4 +109,29 @@ int* factori(int num) {
     }
     *(ptr+pos) = 0; // null terminated array
     return ptr;
+}
+
+struct Queue* fill_queue(char* path, int length)
+{
+    FILE* file;
+    Queue* q;
+    Task* tsk;
+    char buffer[MAX_BUFF];
+    int i, cnt;
+    errno_t err;
+    q = InitializeQueue();
+
+    if ((err = fopen_s(&file, path, "r+")) || file == NULL)
+    {
+        printf("File was not opened\n");
+    }
+    else
+    {
+        for (cnt = 0; cnt < length; ++cnt) {
+            i = strtol(fgets(buffer, MAX_BUFF, file), NULL, 10);
+            tsk = InitializeTask(i);
+            Push(q, tsk);
+        }
+        return q;
+    }
 }

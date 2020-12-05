@@ -29,7 +29,7 @@
  */
 
 #define __FILENAME__  (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
-
+#define MAX_BUFF 100
 
 
 enum status
@@ -103,11 +103,12 @@ int my_atoi(char* str, int* p_result);
 /**
  ******************************************************************************
  * @brief
+ * @param length of input files
  * @param path to priority input file 
  * @return pointer to Queue struct
  ******************************************************************************
  */
-struct Queue *fill_queue(char *path);
+struct Queue *fill_queue(char *path, int length);
 
 /**
  ******************************************************************************
