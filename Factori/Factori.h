@@ -30,14 +30,17 @@
 
 enum thread_status
 {
-    THREAD_STATUS_CONTINUE,
+    THREAD_STATUS_ERR       = ERR,
+    THREAD_STATUS_CONTINUE  = OK,
     THREAD_STATUS_ABORT,
-    THREAD_STATUS_ERR,
     THREAD_STATUS_TIMEOUT,
     THREAD_STATUS_SUCCESS
 };
 
 #define READ_BUFFER_LEN 35
+
+// local macro for status checking
+#define CHECK_STATUS()  if (status != OK) break
 
 /*
  ******************************************************************************

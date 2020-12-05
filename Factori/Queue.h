@@ -45,6 +45,7 @@ struct Queue
     struct Task *head;
     struct Task *tail;
     int cnt;
+    HANDLE *p_h_queue_mtx;
 };
 
 

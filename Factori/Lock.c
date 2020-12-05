@@ -8,7 +8,7 @@
  * the solution is based on Michel Raynal (1949) solution,
  * which uses 2 mutexs and a counter. since WinAPI does not
  * allow a mutex acquired by one thread to be released by another,
- * the "global" mutex is implemented by a binari semaphore.
+ * the global mutex is implemented using a binari semaphore.
  * 
  * by: Chaim Gruda
  *     Nir Beiber

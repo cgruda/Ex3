@@ -9,20 +9,21 @@
  */
 
 /*
- ******************************************************************************
+ ==============================================================================
  * INCLUDES
- ******************************************************************************
+ ==============================================================================
  */
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include "tasks.h"
 #include "Lock.h"
+#include "Factori.h"
 
 /*
- ******************************************************************************
+ ==============================================================================
  * FUNCTION DEFENITIONS
- ******************************************************************************
+ ==============================================================================
  */
 
 void print_usage()
@@ -34,10 +35,13 @@ void print_usage()
            "\t[m]      - number of threads to use   \n\n");
 }
 
+//==============================================================================
+
 void print_error(int err_val, char *err_msg)
 {
     switch (err_val)
     {
+        printf("Error: ");
         case E_STDLIB:
             printf("%s\n", strerror(errno));
             break;
@@ -47,13 +51,15 @@ void print_error(int err_val, char *err_msg)
         case E_INTERNAL:
             if (err_msg)
             {
-                printf("Error: %s\n", err_msg);
+                printf("%s\n", err_msg);
                 break;
             }
         default:
             printf("Unknown Error\n");
     }
 }
+
+//==============================================================================
 
 int my_atoi(char *str, int *p_result)
 {
@@ -70,6 +76,7 @@ int my_atoi(char *str, int *p_result)
                     continue;
             }
 
+            *p_result = 0;
             return ERR;
         }
     }
@@ -77,13 +84,19 @@ int my_atoi(char *str, int *p_result)
     *p_result = strtol(str, NULL, 10);
 
     if (errno == ERANGE)
+    {
+        *p_result = 0;
         return ERR;
+    }
 
     return OK;
 }
 
-int init(struct args* args, int argc, char** argv)
+//==============================================================================
+
+int check_input(struct enviroment *env, int argc, char** argv)
 {
+    struct args *args = &env->args;
     int ret_val = OK;
 
     // check number of arguments
@@ -114,7 +127,7 @@ int init(struct args* args, int argc, char** argv)
     // check n_lines
     if (!my_atoi(argv[3], &args->n_lines))
     {
-        printf("\ninvalid input. [n] must be an integer.\n");
+        printf("\ninvalid input. [n] must be an integer.\n\n");
         ret_val = ERR;
     }
 
@@ -123,7 +136,7 @@ int init(struct args* args, int argc, char** argv)
     if ((rc == ERR) || (args->n_threads < 1) || (args->n_threads > MAXIMUM_WAIT_OBJECTS))
     {
         printf("\ninvalid inupt, [n] must satisfy: MAXIMUM_WAIT_OBJECTS >= n > 0.\n");
-        printf("MAXIMUM_WAIT_OBJECTS = %d\n", MAXIMUM_WAIT_OBJECTS);
+        printf("\t(MAXIMUM_WAIT_OBJECTS = %d)\n\n", MAXIMUM_WAIT_OBJECTS);
         ret_val = ERR;
     }
 
@@ -135,16 +148,25 @@ int init(struct args* args, int argc, char** argv)
     return ret_val;
 }
 
-
+//==============================================================================
+// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
 struct Queue *fill_queue(char *path)
 {
     
 }
 
+//==============================================================================
+// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
 int *factori(int num) 
 {
     int  i, pos = 0;
     int *ptr, *new_ptr;
+
+    // edge cases // FIXME:
+    if (num == 0)
+    {
+        return NULL;
+    }
 
     ptr = (int*)calloc(1, sizeof(*ptr));
     if (!ptr)
@@ -160,7 +182,7 @@ int *factori(int num)
         num /= 2;
         pos++;
         new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
-        if (!ptr)
+        if (!new_ptr)
         {
             PRINT_ERROR(E_STDLIB, 0);
             free(ptr);
@@ -178,7 +200,7 @@ int *factori(int num)
             num /= i;
             pos++;
             new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
-            if (!ptr)
+            if (!new_ptr)
             {
                 PRINT_ERROR(E_STDLIB, 0);
                 free(ptr);
@@ -195,7 +217,7 @@ int *factori(int num)
         num = 1;
         pos++;
         new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
-        if (!ptr)
+        if (!new_ptr)
         {
             PRINT_ERROR(E_STDLIB, 0);
             free(ptr);
@@ -210,17 +232,45 @@ int *factori(int num)
     return ptr;
 }
 
-int create_n_threads(LPTHREAD_START_ROUTINE thread_func, HANDLE *p_h_threads,
-    int n_threads, LPVOID args)
-{
-    int threads_created = 0;
+//==============================================================================
 
-    for (int i = 0; i < n_threads; ++i)
+int create_factori_threads(struct locale_s *locale, struct args_s *args)
+{// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
+    thread_args.path    = main_args.path1;
+        thread_args.p_lock  = p_lock;
+        thread_args.p_queue = p_queue;
+        thread_args.p_h_abort_evt = create_abort_evt();
+        if (!thread_args.p_h_abort_evt)
+        {
+            status = ERR;
+            break;
+        }
+    
+    int threads_created = 0;
+    HANDLE *p_h_threads             = locale->p_h_threads;
+    struct thread_args *thread_args = &locale->thread_args;
+
+    // create abort event
+    thread_args->p_h_abort_evt = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (!thread_args->p_h_abort_evt)
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
+    }
+
+    // allocate thread handles
+    p_h_threads = calloc(args->n_threads, sizeof(HANDLE));
+    if (!p_h_threads)
+        return ERR;
+
+
+
+    for (int i = 0; i < args->n_threads; ++i)
     {
         p_h_threads[i] = CreateThread(NULL,
                                       0,
-                                      thread_func,
-                                      args,
+                                      factori_thread,
+                                      thread_args,
                                       0,
                                       NULL);
         if (!p_h_threads[i])
@@ -235,10 +285,11 @@ int create_n_threads(LPTHREAD_START_ROUTINE thread_func, HANDLE *p_h_threads,
     return threads_created;
 }
 
-
+//==============================================================================
+// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
 int wait_for_n_threads(HANDLE* p_h_threads, int n_threads)
 {
-    DWORD wait_code;
+    DWORD wait_code; 
     DWORD exit_code;
     int rc;
 
@@ -274,6 +325,45 @@ int wait_for_n_threads(HANDLE* p_h_threads, int n_threads)
             return ERR;
         }
     }
+
+    return OK;
+}
+
+//==============================================================================
+
+int init_factori(struct enviroment *p_env)
+{
+    struct Queue *p_queue = p_env->p_queue;
+    struct Lock  *p_lock  = p_env->p_lock;
+
+    // init read-write lock
+    if (!(p_env->p_lock = InitializeLock()))
+        return ERR;
+
+    // init tasks queue
+    if (!(p_env->p_queue = InitializeQueue()))
+        return ERR;
+
+    // init abort event
+    if (!(p_env->h_abort_evt = CreateEvent(NULL, FALSE, FALSE, NULL)))
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
+    }
+
+    // allocate mem for thread handles
+    p_env->p_h_threads = calloc(p_env->args.n_threads, sizeof(HANDLE));
+    if (!p_env->p_h_threads)
+    {
+        PRINT_ERROR(E_STDLIB, 0);
+        return ERR;
+    }
+
+    // fill thread args struct
+    p_env->thread_args.p_h_abort_evt = p_env->h_abort_evt;
+    p_env->thread_args.p_queue       = p_env->p_queue;
+    p_env->thread_args.p_lock        = p_env->p_lock;
+    p_env->thread_args.path          = p_env->args.path1;
 
     return OK;
 }

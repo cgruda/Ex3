@@ -29,7 +29,7 @@
  ******************************************************************************
  */
 
-int wait_for_abort_evt(HANDLE h_abort_evt)
+int check_abort_evt(HANDLE h_abort_evt)
 {
     int status;
     DWORD wait_code;
@@ -63,7 +63,7 @@ int wait_for_queue_mtx(HANDLE h_queue_mtx)
     switch (wait_code)
     {
     case WAIT_OBJECT_0:
-        status = THREAD_STATUS_CONTINUE;
+        status = OK;
         break;
     case WAIT_FAILED:
         PRINT_ERROR(E_WINAPI, 0);
@@ -71,22 +71,49 @@ int wait_for_queue_mtx(HANDLE h_queue_mtx)
     case WAIT_ABANDONED:
         // FALL THROUGH
     case WAIT_TIMEOUT:
-        status = THREAD_STATUS_ERR;
+        status = ERR;
         break;
     }
 
     return status;
 }
 
+int release_queue_mtx(HANDLE h_queue_mtx)
+{
+    if (!ReleaseMutex(h_queue_mtx))
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
+    }
+
+    return OK;
+}
+
+int create_file_handle(HANDLE *h_file, char *path)
+{
+    *h_file = CreateFileA(path,                               // File Name
+                          GENERIC_READ    | GENERIC_WRITE,    // Desired Access
+                          FILE_SHARE_READ | FILE_SHARE_WRITE, // Share Mode
+                          NULL,                               // Security Attributes
+                          OPEN_EXISTING,                      // Creation Disposition
+                          FILE_ATTRIBUTE_NORMAL,              // Flags And Attributes
+                          NULL);                              // Template File
+    if (h_file == INVALID_HANDLE_VALUE)
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return THREAD_STATUS_ERR;
+    }
+
+    return THREAD_STATUS_CONTINUE;
+}
+
 int read_line_from_file(HANDLE h_file, int offset, char *buffer)
 {
     char c;
     int nc = 0;
-    int status;
 
     // set start position
-    status = SetFilePointer(h_file, offset, NULL, FILE_BEGIN);
-    if (status == INVALID_SET_FILE_POINTER)
+    if (SetFilePointer(h_file, offset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
     {
         PRINT_ERROR(E_WINAPI, 0);
         return THREAD_STATUS_ERR;
@@ -95,8 +122,7 @@ int read_line_from_file(HANDLE h_file, int offset, char *buffer)
     // read 1 char at a time until EOL squence
     while (nc < READ_BUFFER_LEN)
     {
-        status = ReadFile(h_file, &c, 1, NULL, NULL);
-        if(!status)
+        if(!ReadFile(h_file, &c, 1, NULL, NULL))
         {
             PRINT_ERROR(E_WINAPI, 0);
             return THREAD_STATUS_ERR;
@@ -124,67 +150,120 @@ int read_line_from_file(HANDLE h_file, int offset, char *buffer)
     return THREAD_STATUS_CONTINUE;
 }
 
-DWORD WINAPI factori_thread(LPVOID param)
+int print_line_to_file(HANDLE *h_file, char *write_buffer)
 {
-    HANDLE h_file             = NULL;
-    HANDLE h_queue_mtx        = NULL;
-    HANDLE h_abort_evt        = NULL;
-    struct thread_args *args  = NULL;
-    struct Queue *p_queue     = NULL;
-    struct Task  *p_task      = NULL;
-    struct Lock  *p_lock      = NULL;
-    char *write_buffer        = NULL;
-    char read_buffer[READ_BUFFER_LEN];
-    int status    = THREAD_STATUS_CONTINUE;
-    DWORD wait_code;
+    int num_bytes = (int)strlen(write_buffer);
 
-    args = (struct thread_args*)(param);
-    h_queue_mtx = *(args->p_h_queue_mtx); // FIXME: make part of queue struct
-    h_abort_evt = *(args->p_h_abort_evt);
-    p_queue     =   args->p_queue;
-    p_lock      =   args->p_lock;
-
-    // open file for read and write
-    h_file = CreateFileA(args->path,                         // File Name
-                         GENERIC_READ    | GENERIC_WRITE,    // Desired Access
-                         FILE_SHARE_READ | FILE_SHARE_WRITE, // Share Mode
-                         NULL,                               // Security Attributes
-                         OPEN_EXISTING,                      // Creation Disposition
-                         FILE_ATTRIBUTE_NORMAL,              // Flags And Attributes
-                         NULL);                              // Template File
-    if (h_file == INVALID_HANDLE_VALUE)
+    // seek end of file
+    if (SetFilePointer(h_file, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
     {
         PRINT_ERROR(E_WINAPI, 0);
-        status = THREAD_STATUS_ERR;
+        return ERR;
     }
+
+    // write output
+    if (!WriteFile(h_file, write_buffer, num_bytes, NULL, NULL))
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
+    }
+
+    free(write_buffer);
+    write_buffer = NULL;
+    return OK;
+}
+
+int num_strlen(int num)
+{
+    int count = 1;
+
+    while(num /= 10)
+    {
+        count++;
+    }
+
+    return count;
+}
+
+int generate_output_string(int num, int *factori_arr, char **write_buffer)
+{
+    size_t buff_len;
+    char *temp_buff;
+    char *buff;
+
+    // sanity
+    if (!factori_arr)
+        return ERR;
+
+    // allocate first chunk
+    buff_len = 27 + num_strlen(num) + 3; // FIXME:
+    buff     = calloc(buff_len, sizeof(*buff));
+    if (!buff)
+    {
+        PRINT_ERROR(E_STDLIB, 0);
+        return ERR;
+    }
+
+    // print first chunk into buffer
+    sprintf_s(buff, buff_len, "The prime factors of %d are: ", num);
+
+    // print factori array results into buffer
+    for (int i = 0; factori_arr[i]; i++)
+    {
+        buff_len += num_strlen(factori_arr[i]) + 2;
+        temp_buff = realloc(buff, buff_len);
+        if (!temp_buff)
+        {
+            PRINT_ERROR(E_STDLIB, 0);
+            free(buff); // FIXME:
+            return ERR;
+        }
+        sprintf_s(temp_buff + strlen(temp_buff),
+                  buff_len  - strlen(temp_buff),
+                  "%d, ", factori_arr[i]);
+        buff = temp_buff;
+    }
+
+    // EOL sequence
+    buff[strlen(buff) - 2] = CR;
+    buff[strlen(buff) - 1] = LF;
+
+    *write_buffer = buff;
+    return OK;
+}
+
+DWORD WINAPI factori_thread(LPVOID param)
+{
+    struct thread_args *args = (struct thread_args*)(param);
+    struct Queue *p_queue    = args->p_queue;
+    struct Lock  *p_lock     = args->p_lock;
+    struct Task  *p_task     = NULL;
+    HANDLE h_file            = NULL;
+    char *write_buffer       = NULL;
+    char read_buffer[READ_BUFFER_LEN];
+    int status = THREAD_STATUS_CONTINUE;
+    int number, *factori_arr;
+
+    // open file for read and write
+    status = create_file_handle(&h_file, args->path);
 
     // thread execution loop
     while(status == THREAD_STATUS_CONTINUE)
     {
-        // check abort event
-        status = wait_for_abort_evt(h_abort_evt);
-        if (status != THREAD_STATUS_CONTINUE)
-        {
-            break;
-        }
+        // check if main thread triggerd abort event
+        status = check_abort_evt(*(args->p_h_abort_evt));
+        CHECK_STATUS();
 
         // acquire exclusive pop access
-        status = wait_for_queue_pop(h_queue_mtx);
-        if (status != THREAD_STATUS_CONTINUE)
-        {
-            break;
-        }
+        status = wait_for_queue_mtx(*(p_queue->p_h_queue_mtx));
+        CHECK_STATUS();
 
         // pop task from queue
         p_task = Pop(p_queue);
 
-        // release pop queue mutex
-        if (!ReleaseMutex(h_queue_mtx))
-        {
-            PRINT_ERROR(E_WINAPI, 0);
-            status = THREAD_STATUS_ERR;
-            break;
-        }
+        // release queue mutex
+        status = release_queue_mtx(*(p_queue->p_h_queue_mtx));
+        CHECK_STATUS();
 
         // if queue is empty, we are done
         if (!p_task)
@@ -193,12 +272,9 @@ DWORD WINAPI factori_thread(LPVOID param)
             break;
         }
 
-        // acquire read permmision
-        if (read_lock(p_lock) != OK)
-        {
-            status = THREAD_STATUS_ERR;
-            break;
-        }
+        // acquire read access
+        status = read_lock(p_lock);
+        CHECK_STATUS();
 
         // read line from file
         status = read_line_from_file(h_file, p_task->offset, &read_buffer);
@@ -210,53 +286,44 @@ DWORD WINAPI factori_thread(LPVOID param)
             break;
         }
 
-        // check read was successful
-        if (status != THREAD_STATUS_CONTINUE)
-        {
-            break;
-        }
+        // check read_line_from_file() & read_release()
+        CHECK_STATUS();
 
-        // calc factori
+        /* convert str to int, calc factori, build output str.
+         * if an error occures at my_atoi() or at factori(),
+         * it will be detected by build_output_string and
+         * status will be set accordingly */
+        my_atoi(read_buffer, &number);
+        factori_arr = factori(number);
+        status = generate_output_string(number, factori_arr, &write_buffer);
+        CHECK_STATUS();
 
-        if (write_lock(p_lock))
-        {
-            status = THREAD_STATUS_ERR;
-            break;
-        }
+        // acquire exclusive write access
+        status = write_lock(p_lock);
+        CHECK_STATUS();
 
-        status = print_line_to_file(h_file, p_task->offset, &read_buffer);
+        // write output (and free write buffer)
+        status = print_line_to_file(h_file, &write_buffer);
 
-        // release read
+        // release write lock
         if (write_release(p_lock) != OK)
         {
             status = THREAD_STATUS_ERR;
             break;
         }
-
-        status = THREAD_STATUS_CONTINUE;
     }
 
+    // cleanup
+    if (h_file)
+    {
+        if (!CloseHandle(h_file))
+        {
+            PRINT_ERROR(E_WINAPI, 0);
+            status = THREAD_STATUS_ERR;
+        }
+    }
+    if (write_buffer)
+        free(write_buffer);
 
-    //     // write output file
-    //     if (!WriteFile(h_outfile, buffer, length, NULL, NULL))
-    //         break;
-
-    //     rc = OK;
-
-    // } while (0);
-
-    // if (rc == ERR)
-    //     printf("encode_decode_thread: WinAPI Error 0x%X\n", GetLastError());
-
-    // // free thread resources
-    // if (h_infile)
-    //     if (!CloseHandle(h_infile))
-    //         rc = ERR;
-    // if (h_outfile)
-    //     if (!CloseHandle(h_outfile))
-    //         rc = ERR;
-    // if (buffer)
-    //     free(buffer);
-
-    ExitThread((DWORD)0);
+    ExitThread((DWORD)status);
 }

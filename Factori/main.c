@@ -8,41 +8,53 @@
  */
 
 /*
- ******************************************************************************
+ ==============================================================================
  * INCLUDES
- ******************************************************************************
+ ==============================================================================
  */
 #include "tasks.h"
+#include "factori.h"
 
 /*
- ******************************************************************************
+ ==============================================================================
  * MAIN
- ******************************************************************************
+ ==============================================================================
  */
 
 int main(int argc, char **argv)
 {
-    // argv[0] - "Factori.exe"
-    // argv[1] - "tasks input file - and also output file"
-    // argv[2] - "priority input file"
-    // argv[3] - "num" (number of lines in files)
-    // argv[4] - "num" (number of threads)
-    int ret_val;
-    struct args args;
-    struct Queue *q;
+    struct enviroment env = {0};
+    int ret_val = ERR;
 
-    ret_val = init(&args, argc, argv);
-    if (ret_val == ERR)
-    {
+    // check input args
+    if (!check_input(&env, argc, argv))
         return ERR;
-    }
 
-    // fill queue
+    // do-while(0) for easy error cleanup
+    do
+    {
+        if (!init_factori(&env)) // TODO:
+            break;
 
-    // call threads
+        // fill queue
+        if (!fill_factori_queue(&env)) // TODO:
+            break;
 
-    // end
+        // start factori threads
+        if (!create_factori_threads(&env)) // TODO:
+            break;
 
-    // this is a test commit 2
-    return 0;
+        // wait for factori threads to end
+        if (!wait_for_factori_threads(&env)) // TODO:
+            break;
+        
+        // if got here then success
+        ret_val = OK;
+
+    } while (0);
+
+    // free resources
+    cleanup_factori(&env); // TODO:
+
+    return ret_val;
 }
