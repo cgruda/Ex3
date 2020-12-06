@@ -12,9 +12,9 @@
 #ifndef __TASKS_H__
 #define __TASKS_H__
 
-
 // for using PathFileExistsA()
 #pragma comment(lib, "Shlwapi.lib")
+
 
 /*
  ==============================================================================
@@ -27,6 +27,7 @@
 #include <string.h>
 #include "Shlwapi.h"
 #include "Queue.h"
+
 
 /*
  ==============================================================================
@@ -62,6 +63,7 @@
 #define E_MSG_MAX_WAIT "Max Wait-time passed\n"
 #define E_MSG_BUF_FULL "Buffer is full\n"
 
+
 /*
  ==============================================================================
  * ENUMERATIONS
@@ -74,6 +76,7 @@ enum err_value
     E_WINAPI,
     E_STDLIB
 };
+
 
 /*
  ==============================================================================
@@ -93,6 +96,7 @@ enum err_value
 
 // print error message
 #define PRINT_ERROR(err_val, err_msg)   do {DBG_STAMP(); print_error((err_val), (err_msg));} while (0)
+
 
 /*
  ==============================================================================
@@ -133,6 +137,7 @@ struct enviroment
     // to be passed to thread
     struct thread_args thread_args;
 };
+
 
 /*
  ==============================================================================
@@ -220,7 +225,6 @@ int wait_for_factori_threads(struct enviroment *p_env);
  ******************************************************************************
  */
 int cleanup_factori(struct enviroment *p_env);
-
 
 
 #endif // __TASKS_H__

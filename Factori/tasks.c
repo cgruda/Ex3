@@ -17,6 +17,7 @@
  * INCLUDES
  ==============================================================================
  */
+
 #include <windows.h>
 #include <errno.h>
 #include <string.h>
@@ -24,6 +25,7 @@
 #include "tasks.h"
 #include "Lock.h"
 #include "Factori.h"
+
 
 /*
  ==============================================================================
@@ -156,7 +158,29 @@ int check_input(struct enviroment *env, int argc, char** argv)
 // TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
 int fill_factori_queue(struct enviroment *p_env)
 {
-    return 1;
+    /*
+    FILE* file;
+    Queue* q;
+    Task* tsk;
+    char buffer[MAX_BUFF];
+    int i, cnt;
+    errno_t err;
+    q = InitializeQueue();
+
+    if ((err = fopen_s(&file, path, "r+")) || file == NULL)
+    {
+        printf("File was not opened\n");
+    }
+    else
+    {
+        for (cnt = 0; cnt < length; ++cnt) {
+            i = strtol(fgets(buffer, MAX_BUFF, file), NULL, 10);
+            tsk = InitializeTask(i);
+            Push(q, tsk);
+        }
+        return q;
+    }
+    */
 }
 
 //==============================================================================

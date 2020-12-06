@@ -18,17 +18,9 @@
  * INCLUDES
  ==============================================================================
  */
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <Windows.h>
 
-/*
- ==============================================================================
- * DEFINES
- ==============================================================================
- */
-#define QUEUE_POP_MAX_WAIT_MS   2000
+#include <stdbool.h>
+
 
  /*
  ==============================================================================
@@ -56,26 +48,58 @@ struct Queue
  ==============================================================================
  */
 
+/**
+ ******************************************************************************
+ * @brief init a queue struct
+ * @return pointer to queue struct
+ ******************************************************************************
+ */
 struct Queue *InitializeQueue();
-
-struct Task *Top(struct Queue *p_queue);
-
-struct Task *Pop(struct Queue *p_queue);
-
-void Push(struct Queue *p_queue, struct Task *p_task);
-
-bool Empty(struct Queue *p_queue);
-
-int DestroyQueue(struct Queue *p_queue);
 
 /**
  ******************************************************************************
- * @brief
- * @param
- * @param
- * @return
+ * @brief peek into queue
+ * @param p_queue pointer to queue
+ * @return pointer to head
  ******************************************************************************
  */
+struct Task *Top(struct Queue *p_queue);
+
+/**
+ ******************************************************************************
+ * @brief pop element from queue
+ * @param p_queue pointer to queue
+ * @return pointer to popped element (the head)
+ ******************************************************************************
+ */
+struct Task *Pop(struct Queue *p_queue);
+
+/**
+ ******************************************************************************
+ * @brief push an element into the queue
+ * @param p_queue pointer to queue
+ * @param p_task pointer to task to be pushed into queue
+ ******************************************************************************
+ */
+void Push(struct Queue *p_queue, struct Task *p_task);
+
+/**
+ ******************************************************************************
+ * @brief check if queue is empty
+ * @param p_queue pointer to queue
+ * @return true or false
+ ******************************************************************************
+ */
+bool Empty(struct Queue *p_queue);
+
+/**
+ ******************************************************************************
+ * @brief destroy queue struct and all elements in it
+ * @param p_queue pointer to queue
+ * @return OK or ERR
+ ******************************************************************************
+ */
+int DestroyQueue(struct Queue *p_queue);
 
 
 #endif // __QUEUE_H__

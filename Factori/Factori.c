@@ -13,6 +13,7 @@
  * INCLUDES
  ==============================================================================
  */
+
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 #include "Queue.h"
 #include "Factori.h"
 #include "Lock.h"
+
 
 /*
  ==============================================================================
@@ -114,10 +116,13 @@ int release_queue_mtx(HANDLE h_queue_mtx)
 
 //==============================================================================
 
-int read_line_from_file(HANDLE h_file, int offset, char **buffer)
+int read_line_from_file(HANDLE h_file, struct Task **p_task, char **buffer)
 {
     char c;
     int nc = 0;
+    int offset = (*p_task)->offset;
+    free(p_task);
+    p_task = NULL;
 
     // FIXME: allocate buffer
     // set start position
@@ -126,7 +131,7 @@ int read_line_from_file(HANDLE h_file, int offset, char **buffer)
         PRINT_ERROR(E_WINAPI, 0);
         return THREAD_STATUS_ERR;
     }
-
+/*
     // read 1 char at a time until EOL squence
     while (nc < READ_BUFFER_LEN)
     {
@@ -153,7 +158,7 @@ int read_line_from_file(HANDLE h_file, int offset, char **buffer)
         PRINT_ERROR(E_INTERNAL, E_MSG_BUF_FULL);
         return THREAD_STATUS_ERR;
     }
-
+*/
     // number of chars NOT including EOL sequence
     return THREAD_STATUS_CONTINUE;
 }
@@ -300,9 +305,9 @@ int generate_output_string(int num, int *factori_arr, char **write_buffer)
 
 //==============================================================================
 
-int print_line_to_file(HANDLE *h_file, char *write_buffer)
+int print_line_to_file(HANDLE *h_file, char **write_buffer)
 {
-    int num_bytes = (int)strlen(write_buffer);
+    int num_bytes = (int)strlen(*write_buffer);
 
     // seek end of file
     if (SetFilePointer(h_file, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
@@ -312,14 +317,14 @@ int print_line_to_file(HANDLE *h_file, char *write_buffer)
     }
 
     // write output
-    if (!WriteFile(h_file, write_buffer, num_bytes, NULL, NULL))
+    if (!WriteFile(h_file, *write_buffer, num_bytes, NULL, NULL))
     {
         PRINT_ERROR(E_WINAPI, 0);
         return ERR;
     }
 
-    free(write_buffer);
-    write_buffer = NULL;
+    free(*write_buffer);
+    *write_buffer = NULL;
     return OK;
 }
 
@@ -370,7 +375,7 @@ DWORD WINAPI factori_thread(LPVOID param)
         CHECK_STATUS();
 
         // read line from file
-        status = read_line_from_file(h_file, p_task->offset, &read_buffer);
+        status = read_line_from_file(h_file, p_task, &read_buffer);
 
         // release read
         if (read_release(p_lock) != OK)
@@ -387,6 +392,8 @@ DWORD WINAPI factori_thread(LPVOID param)
          * it will be detected by build_output_string and
          * status will be set accordingly */
         my_atoi(read_buffer, &number);
+        free(read_buffer);
+        read_buffer = NULL;
         factori_arr = factori(number);
         status = generate_output_string(number, factori_arr, &write_buffer);
         CHECK_STATUS();
@@ -419,6 +426,8 @@ DWORD WINAPI factori_thread(LPVOID param)
         free(read_buffer);
     if (write_buffer)
         free(write_buffer);
+    if (p_task)
+        free(p_task);
 
     ExitThread((DWORD)status);
 }
