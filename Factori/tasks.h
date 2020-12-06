@@ -3,7 +3,7 @@
  * Factori Project
  * ISP_HW_3_2020
  *
- * 
+ * this is the header file of tasks module
  *
  * by: Chaim Gruda
  *     Nir Beiber
@@ -34,52 +34,72 @@
  ==============================================================================
  */
 
-#define __FILENAME__  (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
-#define ARGC 5
-#define SEC2MS          1000
-#define MIN2SEC         60
-#define MAX_WAIT_TIME_ALL_MS (10 * MIN2SEC * SEC2MS)
-#define WAIT_0_MS        0
-#define INT_LENGTH      32
+// debug prints enable
+#define DBG_ENABLE     1
 
-#define CR 0xD
-#define LF 0xA
+// input arguments count
+#define ARGC           5
 
-
-
+// define return values
 #define ERR 0
 #define OK  1
 
+// for debug use
+#define __FILENAME__   (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
-/* // TODO:
+// wating times
+#define MAX_WAIT_TIME_ALL_MS (10 * MIN2SEC * SEC2MS)
+#define WAIT_0_MS       0
+#define SEC2MS          1000
+#define MIN2SEC         60
+
+// for printing
+#define CR 0xD
+#define LF 0xA
+
+// error messages
+#define E_MSG_NULL_PTR "Null Pointer\n"
+#define E_MSG_MAX_WAIT "Max Wait-time passed\n"
+#define E_MSG_BUF_FULL "Buffer is full\n"
+
+/*
  ==============================================================================
- * MACROS
+ * ENUMERATIONS
  ==============================================================================
  */
-// debug stamp [file,function,line]
-#define DBG_STAMP()     printf("[%s,%s,%d]", __FILENAME__, __func__, __LINE__)
-// debug print
-#define DBG_PRINT(...)  do {DBG_STAMP(); printf(__VA_ARGS__);} while (0)
 
-enum err_value // TODO:
+enum err_value
 {
     E_INTERNAL,
     E_WINAPI,
     E_STDLIB
 };
 
+/*
+ ==============================================================================
+ * MACROS
+ ==============================================================================
+ */
+
+// debug stamp [file,function,line]
+#define DBG_STAMP()     printf("[%s; %s; %d] ", __FILENAME__, __func__, __LINE__)
+
+// for debuging
+#if DBG_ENABLE
+#define DBG_PRINT(...)  do {DBG_STAMP(); printf(__VA_ARGS__);} while (0)
+#else
+#define DBG_PRINT(...)
+#endif
+
+// print error message
 #define PRINT_ERROR(err_val, err_msg)   do {DBG_STAMP(); print_error((err_val), (err_msg));} while (0)
-
-#define E_MSG_NULL_PTR "Null Pointer\n"
-#define E_MSG_MAX_WAIT "Max Wait-time passed\n"
-#define E_MSG_BUF_FULL "Buffer is full\n"
-
 
 /*
  ==============================================================================
  * STRUCTURES
  ==============================================================================
  */
+
 struct args
 {
     char* path1;
@@ -94,6 +114,7 @@ struct thread_args
     struct Queue *p_queue;
     struct Lock  *p_lock;
     HANDLE *p_h_abort_evt;
+    HANDLE *p_h_queue_mtx;
 };
 
 struct enviroment
@@ -106,6 +127,7 @@ struct enviroment
     // copy of thread args
     struct Queue *p_queue;
     struct Lock  *p_lock;
+    HANDLE h_queue_mtx;
     HANDLE h_abort_evt;
 
     // to be passed to thread
@@ -117,6 +139,16 @@ struct enviroment
  * DECLARATIONS
  ==============================================================================
  */
+
+/**
+ ******************************************************************************
+ * @brief convert string to integer
+ * @param str to be converted
+ * @param p_result pointer to integer that will get the result
+ * @return OK or ERR
+ ******************************************************************************
+ */
+int my_atoi(char *str, int *p_result);
 
 /**
  ******************************************************************************
@@ -137,22 +169,12 @@ void print_error(int err_val, char *err_msg);
 /**
  ******************************************************************************
  * @brief check validity of inputs arguments
- * @param env pointer to enviroment struct
+ * @param p_env pointer to enviroment struct
  * @param argc from main
  * @param argv from main
  ******************************************************************************
  */
-int check_input(struct enviroment *env, int argc, char **argv);
-
-/**
- ******************************************************************************
- * @brief convert string to integer
- * @param str to be converted
- * @param p_result pointer to integer that will get the result
- * @return OK or ERR
- ******************************************************************************
- */
-int my_atoi(char *str, int *p_result);
+int check_input(struct enviroment *p_env, int argc, char **argv);
 
 /**
  ******************************************************************************
@@ -163,51 +185,38 @@ int my_atoi(char *str, int *p_result);
  */
 int init_factori(struct enviroment *p_env);
 
-/** // TODO:
+/**
  ******************************************************************************
  * @brief fill queue with task ofssets from priorities input file
- * @param 
- * @return 
+ * @param p_env pointer to enviroment struct
+ * @return OK or ERR
  ******************************************************************************
  */
 int fill_factori_queue(struct enviroment *p_env);
 
-/** // TODO:
+/**
  ******************************************************************************
- * @brief 
- * @param num
- * @param
- * @return null termianted array
- ******************************************************************************
- */
-int *factori(int num);
-
-/** // TODO:
- ******************************************************************************
- * @brief 
- * @param num
- * @param
- * @return null termianted array
+ * @brief create all factori threads
+ * @param p_env pointer to enviroment struct
+ * @return OK or ERR
  ******************************************************************************
  */
 int create_factori_threads(struct enviroment *p_env);
 
-/** // TODO:
+/**
  ******************************************************************************
- * @brief 
- * @param num
- * @param
- * @return null termianted array
+ * @brief wait for all factori threads to end, and check exit codes
+ * @param p_env pointer to enviroment struct
+ * @return OK or ERR
  ******************************************************************************
  */
 int wait_for_factori_threads(struct enviroment *p_env);
 
-/** // TODO:
+/**
  ******************************************************************************
- * @brief 
- * @param num
- * @param
- * @return null termianted array
+ * @brief free all program resources
+ * @param p_env pointer to enviroment struct
+ * @return OK or ERR
  ******************************************************************************
  */
 int cleanup_factori(struct enviroment *p_env);

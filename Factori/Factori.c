@@ -9,9 +9,9 @@
  */
 
 /*
- ******************************************************************************
+ ==============================================================================
  * INCLUDES
- ******************************************************************************
+ ==============================================================================
  */
 #include <windows.h>
 #include <stdio.h>
@@ -23,10 +23,30 @@
 #include "Lock.h"
 
 /*
- ******************************************************************************
+ ==============================================================================
  * FUNCTION DEFENITIONS
- ******************************************************************************
+ ==============================================================================
  */
+
+int create_file_handle(HANDLE *h_file, char *path)
+{
+    *h_file = CreateFileA(path,                               // File Name
+                          GENERIC_READ    | GENERIC_WRITE,    // Desired Access
+                          FILE_SHARE_READ | FILE_SHARE_WRITE, // Share Mode
+                          NULL,                               // Security Attributes
+                          OPEN_EXISTING,                      // Creation Disposition
+                          FILE_ATTRIBUTE_NORMAL,              // Flags And Attributes
+                          NULL);                              // Template File
+    if (h_file == INVALID_HANDLE_VALUE)
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return THREAD_STATUS_ERR;
+    }
+
+    return THREAD_STATUS_CONTINUE;
+}
+
+//==============================================================================
 
 int check_abort_evt(HANDLE h_abort_evt)
 {
@@ -53,6 +73,8 @@ int check_abort_evt(HANDLE h_abort_evt)
     return status;
 }
 
+//==============================================================================
+
 int wait_for_queue_mtx(HANDLE h_queue_mtx)
 {
     int status;
@@ -77,6 +99,8 @@ int wait_for_queue_mtx(HANDLE h_queue_mtx)
     return status;
 }
 
+//==============================================================================
+
 int release_queue_mtx(HANDLE h_queue_mtx)
 {
     if (!ReleaseMutex(h_queue_mtx))
@@ -88,29 +112,14 @@ int release_queue_mtx(HANDLE h_queue_mtx)
     return OK;
 }
 
-int create_file_handle(HANDLE *h_file, char *path)
-{
-    *h_file = CreateFileA(path,                               // File Name
-                          GENERIC_READ    | GENERIC_WRITE,    // Desired Access
-                          FILE_SHARE_READ | FILE_SHARE_WRITE, // Share Mode
-                          NULL,                               // Security Attributes
-                          OPEN_EXISTING,                      // Creation Disposition
-                          FILE_ATTRIBUTE_NORMAL,              // Flags And Attributes
-                          NULL);                              // Template File
-    if (h_file == INVALID_HANDLE_VALUE)
-    {
-        PRINT_ERROR(E_WINAPI, 0);
-        return THREAD_STATUS_ERR;
-    }
+//==============================================================================
 
-    return THREAD_STATUS_CONTINUE;
-}
-
-int read_line_from_file(HANDLE h_file, int offset, char *buffer)
+int read_line_from_file(HANDLE h_file, int offset, char **buffer)
 {
     char c;
     int nc = 0;
 
+    // FIXME: allocate buffer
     // set start position
     if (SetFilePointer(h_file, offset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
     {
@@ -149,28 +158,84 @@ int read_line_from_file(HANDLE h_file, int offset, char *buffer)
     return THREAD_STATUS_CONTINUE;
 }
 
-int print_line_to_file(HANDLE *h_file, char *write_buffer)
+//==============================================================================
+
+int *factori(int num) 
 {
-    int num_bytes = (int)strlen(write_buffer);
+    int  i, pos = 0;
+    int *ptr, *new_ptr;
 
-    // seek end of file
-    if (SetFilePointer(h_file, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
+    // edge cases // FIXME:
+    if (num == 0)
     {
-        PRINT_ERROR(E_WINAPI, 0);
-        return ERR;
+        return NULL;
     }
 
-    // write output
-    if (!WriteFile(h_file, write_buffer, num_bytes, NULL, NULL))
+    ptr = (int*)calloc(1, sizeof(*ptr));
+    if (!ptr)
     {
-        PRINT_ERROR(E_WINAPI, 0);
-        return ERR;
+        PRINT_ERROR(E_STDLIB, 0);
+        return NULL;
     }
 
-    free(write_buffer);
-    write_buffer = NULL;
-    return OK;
+    // num is even
+    while (num % 2 == 0)
+    {
+        *(ptr + pos) = 2;
+        num /= 2;
+        pos++;
+        new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
+        if (!new_ptr)
+        {
+            PRINT_ERROR(E_STDLIB, 0);
+            free(ptr);
+            return NULL;
+        }
+        ptr = new_ptr;
+    }
+
+    //num is odd
+    for (i = 3; i < (num / 2); i += 2)
+    {
+        while (num % i == 0)
+        {
+            *(ptr + pos) = i;
+            num /= i;
+            pos++;
+            new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
+            if (!new_ptr)
+            {
+                PRINT_ERROR(E_STDLIB, 0);
+                free(ptr);
+                return NULL;
+            }
+            ptr = new_ptr;
+        }
+    }
+
+    // num remaind is prime
+    if (num > 2)
+    {
+        *(ptr + pos) = num;
+        num = 1;
+        pos++;
+        new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
+        if (!new_ptr)
+        {
+            PRINT_ERROR(E_STDLIB, 0);
+            free(ptr);
+            return NULL;
+        }
+        ptr = new_ptr;
+    }
+    
+    // Null terminated array
+    *(ptr+pos) = 0;
+
+    return ptr;
 }
+
+//==============================================================================
 
 int num_strlen(int num)
 {
@@ -183,6 +248,8 @@ int num_strlen(int num)
 
     return count;
 }
+
+//==============================================================================
 
 int generate_output_string(int num, int *factori_arr, char **write_buffer)
 {
@@ -231,6 +298,33 @@ int generate_output_string(int num, int *factori_arr, char **write_buffer)
     return OK;
 }
 
+//==============================================================================
+
+int print_line_to_file(HANDLE *h_file, char *write_buffer)
+{
+    int num_bytes = (int)strlen(write_buffer);
+
+    // seek end of file
+    if (SetFilePointer(h_file, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
+    }
+
+    // write output
+    if (!WriteFile(h_file, write_buffer, num_bytes, NULL, NULL))
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
+    }
+
+    free(write_buffer);
+    write_buffer = NULL;
+    return OK;
+}
+
+//==============================================================================
+
 DWORD WINAPI factori_thread(LPVOID param)
 {
     struct thread_args *args = (struct thread_args*)(param);
@@ -238,8 +332,8 @@ DWORD WINAPI factori_thread(LPVOID param)
     struct Lock  *p_lock     = args->p_lock;
     struct Task  *p_task     = NULL;
     HANDLE h_file            = NULL;
+    char *read_buffer        = NULL;
     char *write_buffer       = NULL;
-    char read_buffer[READ_BUFFER_LEN];
     int status = THREAD_STATUS_CONTINUE;
     int number, *factori_arr;
 
@@ -254,14 +348,14 @@ DWORD WINAPI factori_thread(LPVOID param)
         CHECK_STATUS();
 
         // acquire exclusive pop access
-        status = wait_for_queue_mtx(*(p_queue->p_h_queue_mtx));
+        status = wait_for_queue_mtx(*(args->p_h_queue_mtx));
         CHECK_STATUS();
 
         // pop task from queue
         p_task = Pop(p_queue);
 
         // release queue mutex
-        status = release_queue_mtx(*(p_queue->p_h_queue_mtx));
+        status = release_queue_mtx(*(args->p_h_queue_mtx));
         CHECK_STATUS();
 
         // if queue is empty, we are done
@@ -302,7 +396,7 @@ DWORD WINAPI factori_thread(LPVOID param)
         CHECK_STATUS();
 
         // write output (and free write buffer)
-        status = print_line_to_file(h_file, &write_buffer);
+        status = print_line_to_file(h_file, write_buffer);
 
         // release write lock
         if (write_release(p_lock) != OK)
@@ -321,6 +415,8 @@ DWORD WINAPI factori_thread(LPVOID param)
             status = THREAD_STATUS_ERR;
         }
     }
+    if (read_buffer)
+        free(read_buffer);
     if (write_buffer)
         free(write_buffer);
 

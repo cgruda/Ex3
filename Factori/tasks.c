@@ -3,7 +3,11 @@
  * Factori Project
  * ISP_HW_3_2020
  *
- *
+ * this module contains functions that are called from main.c
+ * as well as my_atoi which is called also by factori.c
+ * these function implement the main flow in portions.
+ * also global defines and macros are contained in this module.
+ * 
  * by: Chaim Gruda
  *     Nir Beiber
  */
@@ -13,6 +17,7 @@
  * INCLUDES
  ==============================================================================
  */
+#include <windows.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -25,41 +30,6 @@
  * FUNCTION DEFENITIONS
  ==============================================================================
  */
-
-void print_usage()
-{
-    printf("\nusage:\n\tfactori.exe [file-1] [file-2] [n] [m]\n\n"
-           "\t[file-1] - path to tasks file         \n"
-           "\t[file-2] - path to priorities file    \n"
-           "\t[n]      - number of lines in file    \n"
-           "\t[m]      - number of threads to use   \n\n");
-}
-
-//==============================================================================
-
-void print_error(int err_val, char *err_msg)
-{
-    switch (err_val)
-    {
-        printf("Error: ");
-        case E_STDLIB:
-            printf("errno = %d\n", errno);
-            break;
-        case E_WINAPI:
-            printf("WinAPI Error 0x%X\n", GetLastError());
-            break;
-        case E_INTERNAL:
-            if (err_msg)
-            {
-                printf("%s\n", err_msg);
-                break;
-            }
-        default:
-            printf("Unknown Error\n");
-    }
-}
-
-//==============================================================================
 
 int my_atoi(char *str, int *p_result)
 {
@@ -94,8 +64,45 @@ int my_atoi(char *str, int *p_result)
 
 //==============================================================================
 
+void print_usage()
+{
+    printf("\nusage:\n\tfactori.exe [file-1] [file-2] [n] [m]\n\n"
+           "\t[file1] - path to tasks file         \n"
+           "\t[file2] - path to priorities file    \n"
+           "\t[n]     - number of lines in file    \n"
+           "\t[m]     - number of threads to use   \n\n");
+}
+
+//==============================================================================
+
+void print_error(int err_val, char *err_msg)
+{
+    switch (err_val)
+    {
+        printf("Error: ");
+        case E_STDLIB:
+            printf("errno = %d\n", errno);
+            break;
+        case E_WINAPI:
+            printf("WinAPI Error 0x%X\n", GetLastError());
+            break;
+        case E_INTERNAL:
+            if (err_msg)
+            {
+                printf("%s\n", err_msg);
+                break;
+            }
+        default:
+            printf("Unknown Error\n");
+    }
+}
+
+//==============================================================================
+
 int check_input(struct enviroment *env, int argc, char** argv)
 {
+    DBG_PRINT("test\n");
+
     struct args *args = &env->args;
     int ret_val = OK;
 
@@ -106,13 +113,11 @@ int check_input(struct enviroment *env, int argc, char** argv)
         return ERR;
     }
 
-    memset(args, 0, sizeof(*args));
-
     // input file 1 path check
     args->path1 = argv[1];
     if (!PathFileExistsA(args->path1))
     {
-        printf("\n%s not found (WinAPI Error 0x%X)\n\n", args->path1, GetLastError());
+        printf("\n%s not found (WinAPI Error 0x%X)", args->path1, GetLastError());
         ret_val = ERR;
     }
 
@@ -120,14 +125,14 @@ int check_input(struct enviroment *env, int argc, char** argv)
     args->path2 = argv[2];
     if (!PathFileExistsA(args->path2))
     {
-        printf("\n%s not found (WinAPI Error 0x%X)\n\n", args->path2, GetLastError());
+        printf("\n%s not found (WinAPI Error 0x%X)", args->path2, GetLastError());
         ret_val = ERR;
     }
     
     // check n_lines
     if (!my_atoi(argv[3], &args->n_lines))
     {
-        printf("\ninvalid input. [n] must be an integer.\n\n");
+        printf("\ninvalid input: [n] must be an integer.");
         ret_val = ERR;
     }
 
@@ -135,8 +140,7 @@ int check_input(struct enviroment *env, int argc, char** argv)
     int rc = my_atoi(argv[4], &args->n_threads);
     if ((rc == ERR) || (args->n_threads < 1) || (args->n_threads > MAXIMUM_WAIT_OBJECTS))
     {
-        printf("\ninvalid inupt, [n] must satisfy: MAXIMUM_WAIT_OBJECTS >= n > 0.\n");
-        printf("\t(MAXIMUM_WAIT_OBJECTS = %d)\n\n", MAXIMUM_WAIT_OBJECTS);
+        printf("\ninvalid inupt: [m] must satisfy: %d > [m] > 0.\n", MAXIMUM_WAIT_OBJECTS + 1);
         ret_val = ERR;
     }
 
@@ -150,86 +154,9 @@ int check_input(struct enviroment *env, int argc, char** argv)
 
 //==============================================================================
 // TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
-int fill_factori_queue(char *path)
+int fill_factori_queue(struct enviroment *p_env)
 {
-    
-}
-
-//==============================================================================
-// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
-int *factori(int num) 
-{
-    int  i, pos = 0;
-    int *ptr, *new_ptr;
-
-    // edge cases // FIXME:
-    if (num == 0)
-    {
-        return NULL;
-    }
-
-    ptr = (int*)calloc(1, sizeof(*ptr));
-    if (!ptr)
-    {
-        PRINT_ERROR(E_STDLIB, 0);
-        return NULL;
-    }
-
-    // num is even
-    while (num % 2 == 0)
-    {
-        *(ptr + pos) = 2;
-        num /= 2;
-        pos++;
-        new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
-        if (!new_ptr)
-        {
-            PRINT_ERROR(E_STDLIB, 0);
-            free(ptr);
-            return NULL;
-        }
-        ptr = new_ptr;
-    }
-
-    //num is odd
-    for (i = 3; i < (num / 2); i += 2)
-    {
-        while (num % i == 0)
-        {
-            *(ptr + pos) = i;
-            num /= i;
-            pos++;
-            new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
-            if (!new_ptr)
-            {
-                PRINT_ERROR(E_STDLIB, 0);
-                free(ptr);
-                return NULL;
-            }
-            ptr = new_ptr;
-        }
-    }
-
-    // num remaind is prime
-    if (num > 2)
-    {
-        *(ptr + pos) = num;
-        num = 1;
-        pos++;
-        new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
-        if (!new_ptr)
-        {
-            PRINT_ERROR(E_STDLIB, 0);
-            free(ptr);
-            return NULL;
-        }
-        ptr = new_ptr;
-    }
-    
-    // Null terminated array
-    *(ptr+pos) = 0;
-
-    return ptr;
+    return 1;
 }
 
 //==============================================================================
@@ -245,6 +172,9 @@ int init_factori(struct enviroment *p_env)
 
     // init tasks queue
     if (!(p_env->p_queue = InitializeQueue()))
+        return ERR;
+
+    if (!(p_env->h_queue_mtx = CreateMutex(NULL, FALSE, NULL)))
         return ERR;
 
     // init abort event
@@ -264,7 +194,8 @@ int init_factori(struct enviroment *p_env)
     for (int i = 0; i < p_env->args.n_threads; p_env->p_h_threads[i++] = 0);
 
     // fill thread args struct
-    p_env->thread_args.p_h_abort_evt = p_env->h_abort_evt;
+    p_env->thread_args.p_h_abort_evt = &p_env->h_abort_evt;
+    p_env->thread_args.p_h_queue_mtx = &p_env->h_queue_mtx;
     p_env->thread_args.p_queue       = p_env->p_queue;
     p_env->thread_args.p_lock        = p_env->p_lock;
     p_env->thread_args.path          = p_env->args.path1;
@@ -338,6 +269,10 @@ int wait_for_factori_threads(struct enviroment *p_env)
         return ERR;
     }
 
+    //threads must be done since already had abort event
+    if (p_env->threads_created < p_env->args.n_threads)
+        return ERR;
+
     // not all threads ended on time - try abort
     if (status == ERR)
     {
@@ -364,12 +299,14 @@ int wait_for_factori_threads(struct enviroment *p_env)
         }
 
         // thread failed, dont care about others
-        if (exit_code == ERR)
+        if (exit_code != THREAD_STATUS_SUCCESS)
             return ERR;
     }
 
     return OK;
 }
+
+//==============================================================================
 
 int cleanup_factori(struct enviroment *p_env)
 {
@@ -393,6 +330,12 @@ int cleanup_factori(struct enviroment *p_env)
     }
 
     if (!CloseHandle(p_env->h_abort_evt))
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        status = ERR;
+    }
+    
+    if (!CloseHandle(p_env->h_queue_mtx))
     {
         PRINT_ERROR(E_WINAPI, 0);
         status = ERR;

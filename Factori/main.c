@@ -47,7 +47,7 @@ int main(int argc, char **argv)
         // wait for factori threads to end
         if (!wait_for_factori_threads(&env))
             break;
-        
+
         // if got here then success
         ret_val = OK;
 
