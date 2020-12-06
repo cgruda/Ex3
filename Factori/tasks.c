@@ -43,7 +43,7 @@ void print_error(int err_val, char *err_msg)
     {
         printf("Error: ");
         case E_STDLIB:
-            printf("%s\n", strerror(errno));
+            printf("errno = %d\n", errno);
             break;
         case E_WINAPI:
             printf("WinAPI Error 0x%X\n", GetLastError());
@@ -150,7 +150,7 @@ int check_input(struct enviroment *env, int argc, char** argv)
 
 //==============================================================================
 // TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
-struct Queue *fill_queue(char *path)
+int fill_factori_queue(char *path)
 {
     
 }
@@ -234,103 +234,6 @@ int *factori(int num)
 
 //==============================================================================
 
-int create_factori_threads(struct locale_s *locale, struct args_s *args)
-{// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
-    thread_args.path    = main_args.path1;
-        thread_args.p_lock  = p_lock;
-        thread_args.p_queue = p_queue;
-        thread_args.p_h_abort_evt = create_abort_evt();
-        if (!thread_args.p_h_abort_evt)
-        {
-            status = ERR;
-            break;
-        }
-    
-    int threads_created = 0;
-    HANDLE *p_h_threads             = locale->p_h_threads;
-    struct thread_args *thread_args = &locale->thread_args;
-
-    // create abort event
-    thread_args->p_h_abort_evt = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (!thread_args->p_h_abort_evt)
-    {
-        PRINT_ERROR(E_WINAPI, 0);
-        return ERR;
-    }
-
-    // allocate thread handles
-    p_h_threads = calloc(args->n_threads, sizeof(HANDLE));
-    if (!p_h_threads)
-        return ERR;
-
-
-
-    for (int i = 0; i < args->n_threads; ++i)
-    {
-        p_h_threads[i] = CreateThread(NULL,
-                                      0,
-                                      factori_thread,
-                                      thread_args,
-                                      0,
-                                      NULL);
-        if (!p_h_threads[i])
-        {
-            PRINT_ERROR(E_WINAPI, 0);
-            break;
-        }
-
-        threads_created++;
-    }
-
-    return threads_created;
-}
-
-//==============================================================================
-// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
-int wait_for_n_threads(HANDLE* p_h_threads, int n_threads)
-{
-    DWORD wait_code; 
-    DWORD exit_code;
-    int rc;
-
-    // trivial case
-    if (n_threads == 0)
-    {
-        return OK;
-    }
-
-    // wait for all threads to end
-    wait_code = WaitForMultipleObjects(n_threads, p_h_threads, TRUE, MAX_WAIT_TIME_ALL_MS);
-    // wait
-
-    // not all ended on time
-    if (wait_code != WAIT_OBJECT_0)
-    {
-        // set abort event
-
-        // wait some more
-
-        // if not all done then error for exit
-    }
-
-    // all threads ended on time, get exit codes
-    for (int i = 0; i < n_threads; ++i)
-    {
-        rc = GetExitCodeThread(p_h_threads[i], &exit_code);
-        ASSERT_RETURN_VAL(rc, ERR);
-
-        if (exit_code == ERR)
-        {
-            // thread failed, dont care about others
-            return ERR;
-        }
-    }
-
-    return OK;
-}
-
-//==============================================================================
-
 int init_factori(struct enviroment *p_env)
 {
     struct Queue *p_queue = p_env->p_queue;
@@ -358,6 +261,7 @@ int init_factori(struct enviroment *p_env)
         PRINT_ERROR(E_STDLIB, 0);
         return ERR;
     }
+    for (int i = 0; i < p_env->args.n_threads; p_env->p_h_threads[i++] = 0);
 
     // fill thread args struct
     p_env->thread_args.p_h_abort_evt = p_env->h_abort_evt;
@@ -366,4 +270,143 @@ int init_factori(struct enviroment *p_env)
     p_env->thread_args.path          = p_env->args.path1;
 
     return OK;
+}
+
+//==============================================================================
+
+int create_factori_threads(struct enviroment *p_env)
+{
+    p_env->threads_created = 0;
+
+    for (int i = 0; i < p_env->args.n_threads; ++i)
+    {
+        p_env->p_h_threads[i] = CreateThread(NULL,
+                                      0,
+                                      factori_thread,
+                                      (LPVOID)&p_env->thread_args,
+                                      0,
+                                      NULL);
+        if (!p_env->p_h_threads[i])
+        {
+            PRINT_ERROR(E_WINAPI, 0);
+            break;
+        }
+
+        p_env->threads_created++;
+    }
+
+    // if not all were created set abort event
+    if (p_env->threads_created < p_env->args.n_threads)
+    {
+        if (!SetEvent(p_env->h_abort_evt))
+        {
+            PRINT_ERROR(E_WINAPI, 0);
+            return ERR;
+        }
+    }
+
+    return OK;
+}
+
+//==============================================================================
+
+int wait_for_factori_threads(struct enviroment *p_env)
+{
+    int n_threads = p_env->threads_created;
+    DWORD wait_code;
+    DWORD exit_code;
+    int status = ERR;
+
+    // return ERR so that main will return ERR
+    if (p_env->threads_created == 0)
+        return ERR;
+
+    // wait for created threads to end
+    wait_code = WaitForMultipleObjects(n_threads, p_env->p_h_threads, TRUE, MAX_WAIT_TIME_ALL_MS);
+    switch (wait_code)
+    {
+    case WAIT_OBJECT_0:
+        status = OK;
+        break;
+    case WAIT_ABANDONED:
+        // FALL THROUGH
+    case WAIT_TIMEOUT:
+        status = ERR;
+        break;
+    case WAIT_FAILED:
+        PRINT_ERROR(E_WINAPI, 0);
+        return ERR;
+    }
+
+    // not all threads ended on time - try abort
+    if (status == ERR)
+    {
+        if (!SetEvent(p_env->h_abort_evt))
+        {
+            PRINT_ERROR(E_WINAPI, 0);
+            return ERR;
+        }
+        
+        if (WaitForMultipleObjects(n_threads, p_env->p_h_threads, TRUE, 20) == WAIT_FAILED)
+            PRINT_ERROR(E_WINAPI, 0);
+
+        // return ERR in any case
+        return ERR;
+    }
+
+    // all threads ended on time, get exit codes
+    for (int i = 0; i < n_threads; ++i)
+    {
+        if(!GetExitCodeThread(p_env->p_h_threads[i], &exit_code))
+        {
+            PRINT_ERROR(E_WINAPI, 0);
+            return ERR;
+        }
+
+        // thread failed, dont care about others
+        if (exit_code == ERR)
+            return ERR;
+    }
+
+    return OK;
+}
+
+int cleanup_factori(struct enviroment *p_env)
+{
+    int status = OK;
+
+    if (p_env->p_h_threads)
+    {
+        for (int i = 0; i < p_env->args.n_threads; ++i)
+        {
+            if (p_env->p_h_threads[i])
+            {
+                if (!CloseHandle(p_env->p_h_threads[i]))
+                {
+                    PRINT_ERROR(E_WINAPI, 0);
+                    status = ERR;
+                }
+            }
+        }
+
+        free(p_env->p_h_threads);
+    }
+
+    if (!CloseHandle(p_env->h_abort_evt))
+    {
+        PRINT_ERROR(E_WINAPI, 0);
+        status = ERR;
+    }
+
+    if (!DestroyQueue(p_env->p_queue))
+    {
+        status = ERR;
+    }
+
+    if (!DestroyLock(p_env->p_lock))
+    {
+        status = ERR;
+    }
+
+    return status;
 }

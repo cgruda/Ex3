@@ -51,7 +51,7 @@ bool Empty(struct Queue *p_queue)
     // TODO: implement
 }
 
-void DestroyQueue(struct Queue *p_queue)
+int DestroyQueue(struct Queue *p_queue)
 {
     // TODO: implement
 

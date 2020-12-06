@@ -28,7 +28,6 @@
 #include "Shlwapi.h"
 #include "Queue.h"
 
-
 /*
  ==============================================================================
  * DEFINES
@@ -45,6 +44,8 @@
 
 #define CR 0xD
 #define LF 0xA
+
+
 
 #define ERR 0
 #define OK  1
@@ -100,6 +101,7 @@ struct enviroment
     // main params
     struct args args;
     HANDLE *p_h_threads;
+    int threads_created;
 
     // copy of thread args
     struct Queue *p_queue;
@@ -168,7 +170,7 @@ int init_factori(struct enviroment *p_env);
  * @return 
  ******************************************************************************
  */
-struct Queue *fill_queue(char *path);
+int fill_factori_queue(struct enviroment *p_env);
 
 /** // TODO:
  ******************************************************************************
@@ -188,8 +190,7 @@ int *factori(int num);
  * @return null termianted array
  ******************************************************************************
  */
-int create_n_threads(LPTHREAD_START_ROUTINE thread_func, HANDLE *p_h_threads,
-    int n_threads, LPVOID args);
+int create_factori_threads(struct enviroment *p_env);
 
 /** // TODO:
  ******************************************************************************
@@ -199,7 +200,18 @@ int create_n_threads(LPTHREAD_START_ROUTINE thread_func, HANDLE *p_h_threads,
  * @return null termianted array
  ******************************************************************************
  */
-int wait_for_n_threads(HANDLE *p_h_threads, int n_threads);
+int wait_for_factori_threads(struct enviroment *p_env);
+
+/** // TODO:
+ ******************************************************************************
+ * @brief 
+ * @param num
+ * @param
+ * @return null termianted array
+ ******************************************************************************
+ */
+int cleanup_factori(struct enviroment *p_env);
+
 
 
 #endif // __TASKS_H__

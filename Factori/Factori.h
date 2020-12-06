@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "tasks.h"
 
 /*
  ******************************************************************************
@@ -40,7 +41,7 @@ enum thread_status
 #define READ_BUFFER_LEN 35
 
 // local macro for status checking
-#define CHECK_STATUS()  if (status != OK) break
+#define CHECK_STATUS()  if (status != THREAD_STATUS_CONTINUE) break
 
 /*
  ******************************************************************************
@@ -55,10 +56,7 @@ enum thread_status
  * DECLARATIONS
  ******************************************************************************
  */
-
-
 DWORD WINAPI factori_thread(LPVOID param);
-
 
 
 #endif // __FACTORI_H__

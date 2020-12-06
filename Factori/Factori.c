@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "tasks.h"
 #include "Queue.h"
 #include "Factori.h"
 #include "Lock.h"

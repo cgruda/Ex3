@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <Windows.h>
 
 /*
  ******************************************************************************
@@ -65,7 +66,7 @@ void Push(struct Queue *p_queue, struct Task *p_task);
 
 bool Empty(struct Queue *p_queue);
 
-void DestroyQueue(struct Queue *p_queue);
+int DestroyQueue(struct Queue *p_queue);
 
 /**
  ******************************************************************************

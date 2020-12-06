@@ -30,10 +30,10 @@ int main(int argc, char **argv)
     if (!check_input(&env, argc, argv))
         return ERR;
 
-    // do-while(0) for easy error cleanup
+    // do-while(0) for easy cleanup
     do
     {
-        if (!init_factori(&env)) // TODO:
+        if (!init_factori(&env))
             break;
 
         // fill queue
@@ -41,11 +41,11 @@ int main(int argc, char **argv)
             break;
 
         // start factori threads
-        if (!create_factori_threads(&env)) // TODO:
+        if (!create_factori_threads(&env))
             break;
 
         // wait for factori threads to end
-        if (!wait_for_factori_threads(&env)) // TODO:
+        if (!wait_for_factori_threads(&env))
             break;
         
         // if got here then success
@@ -54,7 +54,8 @@ int main(int argc, char **argv)
     } while (0);
 
     // free resources
-    cleanup_factori(&env); // TODO:
+    if (!cleanup_factori(&env))
+        ret_val = ERR;
 
     return ret_val;
 }
