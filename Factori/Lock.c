@@ -49,7 +49,7 @@ struct Lock *InitializeLock()
     }
 
     // create global (binari) semaphore handle
-    p_lock->h_global_smpr = CreateSemaphoreA(NULL, 0, 1, SMPR_G);
+    p_lock->h_global_smpr = CreateSemaphoreA(NULL, 1, 1, SMPR_G);
     if (!p_lock->h_global_smpr)
     {
         PRINT_ERROR(E_WINAPI, 0);
@@ -79,6 +79,7 @@ int read_lock(struct Lock *p_lock)
     }
 
     // ask for readers mutex, so thread can be added to readers_count
+    DBG_PRINT("wait for r lock\n");
     wait_code = WaitForSingleObject(p_lock->h_read_mtx, MAX_WAIT_MS_R);
     LOCK_WAIT_CODE_CHECK(wait_code);
 
@@ -87,11 +88,13 @@ int read_lock(struct Lock *p_lock)
     // only the FIRST reader locks global, not alowing others to write
     if (p_lock->readers_count == 1)
     {
+        DBG_PRINT("wait for g lock\n");
         wait_code = WaitForSingleObject(p_lock->h_global_smpr, MAX_WAIT_MS_R);
         LOCK_WAIT_CODE_CHECK(wait_code);
     }
 
     // release readers mutx, allowing others to start read
+    DBG_PRINT("release r lock\n");
     if(!ReleaseMutex(p_lock->h_read_mtx))
     {
         PRINT_ERROR(E_WINAPI, 0);
@@ -115,6 +118,7 @@ int read_release(struct Lock *p_lock)
     }
 
     // ask for readers mutex, so thread can decrement readers_counter
+    DBG_PRINT("wait for r lock\n");
     wait_code = WaitForSingleObject(p_lock->h_read_mtx, MAX_WAIT_MS_R);
     LOCK_WAIT_CODE_CHECK(wait_code);
 
@@ -123,6 +127,7 @@ int read_release(struct Lock *p_lock)
     // only the LAST reader releases global, allowing others to write
     if (p_lock->readers_count == 0)
     {
+        DBG_PRINT("release g lock\n");
         if(!ReleaseSemaphore(p_lock->h_global_smpr, 1, NULL))
         {
             PRINT_ERROR(E_WINAPI, 0);
@@ -131,6 +136,7 @@ int read_release(struct Lock *p_lock)
     }
 
     // release readers mutex, allowing others to update readers_count
+    DBG_PRINT("release r lock\n");
     if(!ReleaseMutex(p_lock->h_read_mtx))
     {
         return ERR;

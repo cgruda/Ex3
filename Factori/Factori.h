@@ -43,7 +43,6 @@ enum thread_status
     THREAD_STATUS_ERR       = ERR,
     THREAD_STATUS_CONTINUE  = OK,
     THREAD_STATUS_ABORT,
-    THREAD_STATUS_TIMEOUT,
     THREAD_STATUS_SUCCESS
 };
 
@@ -54,7 +53,7 @@ enum thread_status
  ==============================================================================
  */
 
-// local macro for status checking
+// macro for checking thread status
 #define CHECK_STATUS()  if (status != THREAD_STATUS_CONTINUE) break
 
 

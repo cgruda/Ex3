@@ -62,6 +62,7 @@
 #define E_MSG_NULL_PTR "Null Pointer\n"
 #define E_MSG_MAX_WAIT "Max Wait-time passed\n"
 #define E_MSG_BUF_FULL "Buffer is full\n"
+#define E_MSG_INPT_ERR "Input file has bad values\n"
 
 
 /*
@@ -85,7 +86,7 @@ enum err_value
  */
 
 // debug stamp [file,function,line]
-#define DBG_STAMP()     printf("[%s; %s; %d] ", __FILENAME__, __func__, __LINE__)
+#define DBG_STAMP()     printf("[%-9s; %-24s; %-3d] ", __FILENAME__, __func__, __LINE__)
 
 // for debuging
 #if DBG_ENABLE

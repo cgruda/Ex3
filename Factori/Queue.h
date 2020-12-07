@@ -50,6 +50,14 @@ struct Queue
 
 /**
  ******************************************************************************
+ * @brief init a task struct
+ * @return pointer to task struct
+ ******************************************************************************
+ */
+struct Task *InitializeTask(int offset);
+
+/**
+ ******************************************************************************
  * @brief init a queue struct
  * @return pointer to queue struct
  ******************************************************************************
@@ -79,9 +87,10 @@ struct Task *Pop(struct Queue *p_queue);
  * @brief push an element into the queue
  * @param p_queue pointer to queue
  * @param p_task pointer to task to be pushed into queue
+ * @return OK or ERR
  ******************************************************************************
  */
-void Push(struct Queue *p_queue, struct Task *p_task);
+int Push(struct Queue *p_queue, struct Task *p_task);
 
 /**
  ******************************************************************************
@@ -99,7 +108,7 @@ bool Empty(struct Queue *p_queue);
  * @return OK or ERR
  ******************************************************************************
  */
-int DestroyQueue(struct Queue *p_queue);
+int DestroyQueue(struct Queue **p_queue);
 
 
 #endif // __QUEUE_H__

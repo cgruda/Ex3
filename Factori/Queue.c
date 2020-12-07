@@ -39,7 +39,7 @@ struct Task *InitializeTask(int offset)
     p_task->offset = offset;
 
     return p_task;;
-}
+}   
 
 //==============================================================================
 
@@ -86,6 +86,7 @@ struct Task *Pop(struct Queue *p_queue)
 
     if (Empty(p_queue))
     {
+        DBG_PRINT("Queue is empty\n");
         return NULL;
     }
 
@@ -93,16 +94,17 @@ struct Task *Pop(struct Queue *p_queue)
     p_queue->head = p_task->next;
     p_queue->cnt--;
 
+    DBG_PRINT("Pop %d (0x%p), queue_cnt=%d\n", p_task->offset, p_task, p_queue->cnt);
     return p_task;
 }
 
 //==============================================================================
 
-void Push(struct Queue *p_queue, struct Task *p_task)
+int Push(struct Queue *p_queue, struct Task *p_task)
 {
     if (!p_queue || !p_task)
     {
-        return NULL;
+        return ERR;
     }
 
     p_task->next = NULL;
@@ -118,6 +120,9 @@ void Push(struct Queue *p_queue, struct Task *p_task)
 
     p_queue->tail = p_task;
     p_queue->cnt++;
+
+    DBG_PRINT("Push %d (0x%p), queue_cnt=%d\n", p_task->offset, p_task, p_queue->cnt);
+    return OK;
 }
 
 //==============================================================================
@@ -134,21 +139,22 @@ bool Empty(struct Queue *p_queue)
 
 //==============================================================================
 
-int DestroyQueue(struct Queue *p_queue)
+int DestroyQueue(struct Queue **p_queue)
 {
     struct Task *p_task;
 
-    if (!p_task)
+    if (!*p_queue)
     {
         return ERR;
     }
 
-    while (!Empty(p_queue))
+    while (!Empty(*p_queue))
     {
-        p_task = Pop(p_queue);
-        free(p_queue);
+        p_task = Pop(*p_queue);
+        free(p_task);
     }
 
-    free(p_queue);
-    p_queue = NULL;
+    free(*p_queue);
+    *p_queue = NULL;
+    return OK;
 }

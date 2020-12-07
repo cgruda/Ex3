@@ -103,8 +103,6 @@ void print_error(int err_val, char *err_msg)
 
 int check_input(struct enviroment *env, int argc, char** argv)
 {
-    DBG_PRINT("test\n");
-
     struct args *args = &env->args;
     int ret_val = OK;
 
@@ -151,36 +149,52 @@ int check_input(struct enviroment *env, int argc, char** argv)
         print_usage();
     }
 
+    DBG_PRINT("input: path1=%s, path2=%s, n_lines=%d, n_threads=%d\n", args->path1,
+                                                                       args->path2,
+                                                                       args->n_lines,
+                                                                       args->n_threads);
     return ret_val;
 }
 
 //==============================================================================
-// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:// TODO:
+
 int fill_factori_queue(struct enviroment *p_env)
 {
-    /*
-    FILE* file;
-    Queue* q;
-    Task* tsk;
-    char buffer[MAX_BUFF];
-    int i, cnt;
-    errno_t err;
-    q = InitializeQueue();
+    FILE *fp              = NULL;
+    struct Task  *p_task  = NULL;
+    struct Queue *p_queue = NULL;
+    int offset_val;
+    int ret_val = OK;
 
-    if ((err = fopen_s(&file, path, "r+")) || file == NULL)
+    if (fopen_s(&fp, p_env->args.path2, "r"))
     {
-        printf("File was not opened\n");
+        PRINT_ERROR(E_STDLIB, 0);
+        return ERR;
     }
-    else
+
+    p_queue = p_env->p_queue;
+
+    for (int i = 0; i < p_env->args.n_lines; ++i)
     {
-        for (cnt = 0; cnt < length; ++cnt) {
-            i = strtol(fgets(buffer, MAX_BUFF, file), NULL, 10);
-            tsk = InitializeTask(i);
-            Push(q, tsk);
+        fscanf_s(fp, "%d\n", &offset_val);
+
+        p_task = InitializeTask(offset_val);
+        if (!p_task)
+        {
+            ret_val = ERR;
+            break;
         }
-        return q;
+
+        if (!Push(p_queue, p_task))
+        {
+            ret_val = ERR;
+            break;
+        }
     }
-    */
+
+    fclose(fp);
+    DBG_PRINT("fill factori ret=%d\n", ret_val);
+    return ret_val;
 }
 
 //==============================================================================
@@ -224,6 +238,7 @@ int init_factori(struct enviroment *p_env)
     p_env->thread_args.p_lock        = p_env->p_lock;
     p_env->thread_args.path          = p_env->args.path1;
 
+    DBG_PRINT("factori init\n");
     return OK;
 }
 
@@ -260,6 +275,8 @@ int create_factori_threads(struct enviroment *p_env)
         }
     }
 
+    DBG_PRINT("create_factori_threads OK\n");
+    DBG_PRINT("==========================================\n");
     return OK;
 }
 
@@ -327,6 +344,8 @@ int wait_for_factori_threads(struct enviroment *p_env)
             return ERR;
     }
 
+    DBG_PRINT("==========================================\n");
+    DBG_PRINT("wait_for_factori_threads OK\n");
     return OK;
 }
 
@@ -365,7 +384,7 @@ int cleanup_factori(struct enviroment *p_env)
         status = ERR;
     }
 
-    if (!DestroyQueue(p_env->p_queue))
+    if (!DestroyQueue(&p_env->p_queue))
     {
         status = ERR;
     }
@@ -375,5 +394,6 @@ int cleanup_factori(struct enviroment *p_env)
         status = ERR;
     }
 
+    DBG_PRINT("cleanup ret=%d\n", status);
     return status;
 }

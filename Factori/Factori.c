@@ -42,10 +42,10 @@ int create_file_handle(HANDLE *h_file, char *path)
     if (h_file == INVALID_HANDLE_VALUE)
     {
         PRINT_ERROR(E_WINAPI, 0);
-        return THREAD_STATUS_ERR;
+        return ERR;
     }
 
-    return THREAD_STATUS_CONTINUE;
+    return OK;
 }
 
 //==============================================================================
@@ -116,51 +116,50 @@ int release_queue_mtx(HANDLE h_queue_mtx)
 
 //==============================================================================
 
-int read_line_from_file(HANDLE h_file, struct Task **p_task, char **buffer)
+int read_number_from_file(HANDLE h_file, struct Task **p_task, int *number)
 {
     char c;
-    int nc = 0;
-    int offset = (*p_task)->offset;
-    free(p_task);
-    p_task = NULL;
+    int status = OK;
+    *number = 0;
 
-    // FIXME: allocate buffer
+    int offset = (*p_task)->offset;
+    free(*p_task);
+    *p_task = NULL;
+
     // set start position
     if (SetFilePointer(h_file, offset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
     {
         PRINT_ERROR(E_WINAPI, 0);
-        return THREAD_STATUS_ERR;
+        return ERR;
     }
-/*
-    // read 1 char at a time until EOL squence
-    while (nc < READ_BUFFER_LEN)
+
+    while (1)
     {
+        // read 1 char at a time
         if(!ReadFile(h_file, &c, 1, NULL, NULL))
         {
             PRINT_ERROR(E_WINAPI, 0);
-            return THREAD_STATUS_ERR;
-        }
-
-        if(c == '\n')
-        {
-            buffer[nc - 1] = '\0'; // remove trailing CR
+            status = ERR;
             break;
         }
-        else
+
+        // CR indicated end of line
+        if (c == CR)
+            break;
+
+        // check for validity
+        if(!isdigit(c))
         {
-            buffer[nc] = c;
-            nc++;
+            PRINT_ERROR(E_INTERNAL, E_MSG_INPT_ERR);
+            status = ERR;
+            break;
         }
+
+        *number *= 10;
+        *number += (c - '0');
     }
 
-    if (nc == READ_BUFFER_LEN)
-    {
-        PRINT_ERROR(E_INTERNAL, E_MSG_BUF_FULL);
-        return THREAD_STATUS_ERR;
-    }
-*/
-    // number of chars NOT including EOL sequence
-    return THREAD_STATUS_CONTINUE;
+    return status;
 }
 
 //==============================================================================
@@ -170,17 +169,28 @@ int *factori(int num)
     int  i, pos = 0;
     int *ptr, *new_ptr;
 
-    // edge cases // FIXME:
     if (num == 0)
-    {
         return NULL;
-    }
 
     ptr = (int*)calloc(1, sizeof(*ptr));
     if (!ptr)
     {
         PRINT_ERROR(E_STDLIB, 0);
         return NULL;
+    }
+
+    // edge case
+    if (num == 1)
+    {
+        *ptr = 1;
+        new_ptr = (int*)realloc(ptr, 2 * sizeof(int));
+        if (!new_ptr)
+        {
+            PRINT_ERROR(E_STDLIB, 0);
+            free(ptr);
+            return NULL;
+        }
+        ptr = new_ptr;
     }
 
     // num is even
@@ -337,7 +347,6 @@ DWORD WINAPI factori_thread(LPVOID param)
     struct Lock  *p_lock     = args->p_lock;
     struct Task  *p_task     = NULL;
     HANDLE h_file            = NULL;
-    char *read_buffer        = NULL;
     char *write_buffer       = NULL;
     int status = THREAD_STATUS_CONTINUE;
     int number, *factori_arr;
@@ -354,6 +363,7 @@ DWORD WINAPI factori_thread(LPVOID param)
 
         // acquire exclusive pop access
         status = wait_for_queue_mtx(*(args->p_h_queue_mtx));
+        DBG_PRINT("wait_for_queue_mtx=%d\n",status);
         CHECK_STATUS();
 
         // pop task from queue
@@ -361,6 +371,7 @@ DWORD WINAPI factori_thread(LPVOID param)
 
         // release queue mutex
         status = release_queue_mtx(*(args->p_h_queue_mtx));
+        DBG_PRINT("release_queue_mtx=%d\n",status);
         CHECK_STATUS();
 
         // if queue is empty, we are done
@@ -372,48 +383,45 @@ DWORD WINAPI factori_thread(LPVOID param)
 
         // acquire read access
         status = read_lock(p_lock);
+        DBG_PRINT("read_lock=%d\n",status);
         CHECK_STATUS();
 
         // read line from file
-        status = read_line_from_file(h_file, p_task, &read_buffer);
+        status = read_number_from_file(h_file, &p_task, &number);
+        DBG_PRINT("read_number_from_file=%d, number=%d\n", status, number);
 
         // release read
         if (read_release(p_lock) != OK)
-        {
             status = THREAD_STATUS_ERR;
-            break;
-        }
+        DBG_PRINT("read_release=%d\n", status);
 
-        // check read_line_from_file() & read_release()
+        // check read_number_from_file() & read_release()
         CHECK_STATUS();
 
-        /* convert str to int, calc factori, build output str.
-         * if an error occures at my_atoi() or at factori(),
-         * it will be detected by build_output_string and
-         * status will be set accordingly */
-        my_atoi(read_buffer, &number);
-        free(read_buffer);
-        read_buffer = NULL;
+        /* calc factori, build output str. if an error occures at factori(),
+         * it will be detected by build_output_string() and status will be set */
         factori_arr = factori(number);
         status = generate_output_string(number, factori_arr, &write_buffer);
+        DBG_PRINT("generate_output_string=%d, string=%s\n", status, write_buffer);
         CHECK_STATUS();
 
         // acquire exclusive write access
         status = write_lock(p_lock);
+        DBG_PRINT("write_lock=%d\n", status);
         CHECK_STATUS();
 
         // write output (and free write buffer)
-        status = print_line_to_file(h_file, write_buffer);
+        status = print_line_to_file(h_file, &write_buffer);
+        DBG_PRINT("print_line_to_file=%d\n", status);
 
         // release write lock
         if (write_release(p_lock) != OK)
-        {
             status = THREAD_STATUS_ERR;
-            break;
-        }
+        DBG_PRINT("write_release=%d\n", status);
     }
 
     // cleanup
+    DBG_PRINT("thread_cleanup\n");
     if (h_file)
     {
         if (!CloseHandle(h_file))
@@ -422,12 +430,11 @@ DWORD WINAPI factori_thread(LPVOID param)
             status = THREAD_STATUS_ERR;
         }
     }
-    if (read_buffer)
-        free(read_buffer);
     if (write_buffer)
         free(write_buffer);
     if (p_task)
         free(p_task);
 
+    DBG_PRINT("thread_exit=%d\n", status);
     ExitThread((DWORD)status);
 }

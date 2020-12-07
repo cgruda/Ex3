@@ -24,6 +24,7 @@
 
 int main(int argc, char **argv)
 {
+    DBG_PRINT("==========================================\n");
     struct enviroment env = {0};
     int ret_val = ERR;
 
@@ -38,7 +39,7 @@ int main(int argc, char **argv)
             break;
 
         // fill queue
-        if (!fill_factori_queue(&env)) // TODO:
+        if (!fill_factori_queue(&env))
             break;
 
         // start factori threads
@@ -58,5 +59,7 @@ int main(int argc, char **argv)
     if (!cleanup_factori(&env))
         ret_val = ERR;
 
+    DBG_PRINT("exit=%d\n", ret_val);
+    DBG_PRINT("==========================================\n");
     return ret_val;
 }
