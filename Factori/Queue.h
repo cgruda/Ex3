@@ -104,7 +104,7 @@ bool Empty(struct Queue *p_queue);
 /**
  ******************************************************************************
  * @brief destroy queue struct and all elements in it
- * @param p_queue pointer to queue
+ * @param p_queue pointer to queue pointer, queue will be set to NULL
  * @return OK or ERR
  ******************************************************************************
  */

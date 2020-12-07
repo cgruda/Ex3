@@ -33,7 +33,7 @@ struct Lock *InitializeLock()
     int    status       = OK;
 
     // allocate lock mem
-    p_lock = calloc(1, sizeof(*p_lock));
+    p_lock = (struct Lock*)calloc(1, sizeof(*p_lock));
     if (!p_lock)
     {
         PRINT_ERROR(E_STDLIB, 0);
@@ -58,9 +58,7 @@ struct Lock *InitializeLock()
 
     // in case a handle creation failed
     if (status != OK)
-    {
-        DestroyLock(p_lock);
-    }
+        DestroyLock(&p_lock);
 
     return p_lock;
 }
@@ -79,7 +77,6 @@ int read_lock(struct Lock *p_lock)
     }
 
     // ask for readers mutex, so thread can be added to readers_count
-    DBG_PRINT("wait for r lock\n");
     wait_code = WaitForSingleObject(p_lock->h_read_mtx, MAX_WAIT_MS_R);
     LOCK_WAIT_CODE_CHECK(wait_code);
 
@@ -88,13 +85,11 @@ int read_lock(struct Lock *p_lock)
     // only the FIRST reader locks global, not alowing others to write
     if (p_lock->readers_count == 1)
     {
-        DBG_PRINT("wait for g lock\n");
         wait_code = WaitForSingleObject(p_lock->h_global_smpr, MAX_WAIT_MS_R);
         LOCK_WAIT_CODE_CHECK(wait_code);
     }
 
     // release readers mutx, allowing others to start read
-    DBG_PRINT("release r lock\n");
     if(!ReleaseMutex(p_lock->h_read_mtx))
     {
         PRINT_ERROR(E_WINAPI, 0);
@@ -118,7 +113,6 @@ int read_release(struct Lock *p_lock)
     }
 
     // ask for readers mutex, so thread can decrement readers_counter
-    DBG_PRINT("wait for r lock\n");
     wait_code = WaitForSingleObject(p_lock->h_read_mtx, MAX_WAIT_MS_R);
     LOCK_WAIT_CODE_CHECK(wait_code);
 
@@ -127,7 +121,6 @@ int read_release(struct Lock *p_lock)
     // only the LAST reader releases global, allowing others to write
     if (p_lock->readers_count == 0)
     {
-        DBG_PRINT("release g lock\n");
         if(!ReleaseSemaphore(p_lock->h_global_smpr, 1, NULL))
         {
             PRINT_ERROR(E_WINAPI, 0);
@@ -136,11 +129,8 @@ int read_release(struct Lock *p_lock)
     }
 
     // release readers mutex, allowing others to update readers_count
-    DBG_PRINT("release r lock\n");
     if(!ReleaseMutex(p_lock->h_read_mtx))
-    {
         return ERR;
-    }
 
     return OK;
 }
@@ -188,21 +178,21 @@ int write_release(struct Lock *p_lock)
 
 //==============================================================================
 
-int DestroyLock(struct Lock *p_lock)
+int DestroyLock(struct Lock **p_lock)
 {
     int ret_val = OK;
 
     // sanity
-    if (!p_lock)
+    if (!*p_lock)
     {
         PRINT_ERROR(E_INTERNAL, E_MSG_NULL_PTR);
         return ERR;
     }
 
     // close mutex handler
-    if (p_lock->h_read_mtx)
+    if ((*p_lock)->h_read_mtx)
     {
-        if (!CloseHandle(p_lock->h_read_mtx))
+        if (!CloseHandle((*p_lock)->h_read_mtx))
         {
             PRINT_ERROR(E_WINAPI, 0);
             ret_val = ERR;
@@ -210,17 +200,17 @@ int DestroyLock(struct Lock *p_lock)
     }
 
     // close semaphore handler
-    if (p_lock->h_global_smpr)
+    if ((*p_lock)->h_global_smpr)
     {
-        if (!CloseHandle(p_lock->h_global_smpr))
+        if (!CloseHandle((*p_lock)->h_global_smpr))
         {
             PRINT_ERROR(E_WINAPI, 0);
             ret_val = ERR;
         }
     }
 
-    free(p_lock);
-    p_lock = NULL;
+    free(*p_lock);
+    *p_lock = NULL;
 
     return ret_val;
 }

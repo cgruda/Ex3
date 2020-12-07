@@ -79,9 +79,9 @@ void print_usage()
 
 void print_error(int err_val, char *err_msg)
 {
+    printf("Error: ");
     switch (err_val)
     {
-        printf("Error: ");
         case E_STDLIB:
             printf("errno = %d\n", errno);
             break;
@@ -145,9 +145,7 @@ int check_input(struct enviroment *env, int argc, char** argv)
     }
 
     if (ret_val != OK)
-    {
         print_usage();
-    }
 
     DBG_PRINT("input: path1=%s, path2=%s, n_lines=%d, n_threads=%d\n", args->path1,
                                                                        args->path2,
@@ -212,8 +210,12 @@ int init_factori(struct enviroment *p_env)
     if (!(p_env->p_queue = InitializeQueue()))
         return ERR;
 
+    // init queue mutex
     if (!(p_env->h_queue_mtx = CreateMutex(NULL, FALSE, NULL)))
+    {
+        PRINT_ERROR(E_WINAPI, 0);
         return ERR;
+    }
 
     // init abort event
     if (!(p_env->h_abort_evt = CreateEvent(NULL, FALSE, FALSE, NULL)))
@@ -223,7 +225,7 @@ int init_factori(struct enviroment *p_env)
     }
 
     // allocate mem for thread handles
-    p_env->p_h_threads = calloc(p_env->args.n_threads, sizeof(HANDLE));
+    p_env->p_h_threads = (HANDLE*)calloc(p_env->args.n_threads, sizeof(HANDLE));
     if (!p_env->p_h_threads)
     {
         PRINT_ERROR(E_STDLIB, 0);
@@ -389,7 +391,7 @@ int cleanup_factori(struct enviroment *p_env)
         status = ERR;
     }
 
-    if (!DestroyLock(p_env->p_lock))
+    if (!DestroyLock(&p_env->p_lock))
     {
         status = ERR;
     }

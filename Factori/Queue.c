@@ -28,7 +28,7 @@ struct Task *InitializeTask(int offset)
 {
     struct Task *p_task;
 
-    p_task = calloc(1, sizeof(*p_task));
+    p_task = (struct Task*)calloc(1, sizeof(*p_task));
     if (!p_task)
     {
         PRINT_ERROR(E_STDLIB, 0);
@@ -47,7 +47,7 @@ struct Queue *InitializeQueue()
 {
     struct Queue *p_queue;
 
-    p_queue = calloc(1, sizeof(*p_queue));
+    p_queue = (struct Queue*)calloc(1, sizeof(*p_queue));
     if (!p_queue)
     {
         PRINT_ERROR(E_STDLIB, 0);
@@ -66,9 +66,7 @@ struct Queue *InitializeQueue()
 struct Task *Top(struct Queue *p_queue)
 {
     if (!p_queue)
-    {
         return NULL;
-    }
 
     return p_queue->head;
 }
@@ -80,9 +78,7 @@ struct Task *Pop(struct Queue *p_queue)
     struct Task *p_task = NULL;
 
     if (!p_queue)
-    {
         return NULL;
-    }
 
     if (Empty(p_queue))
     {
@@ -103,20 +99,14 @@ struct Task *Pop(struct Queue *p_queue)
 int Push(struct Queue *p_queue, struct Task *p_task)
 {
     if (!p_queue || !p_task)
-    {
         return ERR;
-    }
 
     p_task->next = NULL;
 
     if (Empty(p_queue))
-    {
         p_queue->head = p_task;
-    }
     else
-    {
         p_queue->tail->next = p_task;
-    }
 
     p_queue->tail = p_task;
     p_queue->cnt++;
@@ -130,9 +120,7 @@ int Push(struct Queue *p_queue, struct Task *p_task)
 bool Empty(struct Queue *p_queue)
 {
     if (!p_queue)
-    {
         return true;
-    }
 
     return (p_queue->cnt == 0);
 }
@@ -144,9 +132,7 @@ int DestroyQueue(struct Queue **p_queue)
     struct Task *p_task;
 
     if (!*p_queue)
-    {
         return ERR;
-    }
 
     while (!Empty(*p_queue))
     {

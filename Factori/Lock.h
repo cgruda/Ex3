@@ -132,11 +132,11 @@ int write_release(struct Lock *p_lock);
 /**
  ******************************************************************************
  * @brief  frees all Lock struct resources
- * @param  p_lock pointer to lock struct, will be set to NULL
+ * @param  p_lock pointer to lock pointer, lock will be set to NULL
  * @return success: OK, failure (close handle failed): ERR
  ******************************************************************************
  */
-int DestroyLock(struct Lock *p_lock);
+int DestroyLock(struct Lock **p_lock);
 
 
 #endif // __LOCK_H__

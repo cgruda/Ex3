@@ -122,6 +122,7 @@ int read_number_from_file(HANDLE h_file, struct Task **p_task, int *number)
     int status = OK;
     *number = 0;
 
+    // save task offset and free task
     int offset = (*p_task)->offset;
     free(*p_task);
     *p_task = NULL;
@@ -143,7 +144,7 @@ int read_number_from_file(HANDLE h_file, struct Task **p_task, int *number)
             break;
         }
 
-        // CR indicated end of line
+        // CR indicates end of line
         if (c == CR)
             break;
 
@@ -232,7 +233,6 @@ int *factori(int num)
     if (num > 2)
     {
         *(ptr + pos) = num;
-        num = 1;
         pos++;
         new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
         if (!new_ptr)
@@ -245,7 +245,7 @@ int *factori(int num)
     }
     
     // Null terminated array
-    *(ptr+pos) = 0;
+    *(ptr + pos) = 0;
 
     return ptr;
 }
@@ -257,9 +257,7 @@ int num_strlen(int num)
     int count = 1;
 
     while(num /= 10)
-    {
         count++;
-    }
 
     return count;
 }
@@ -277,8 +275,8 @@ int generate_output_string(int num, int *factori_arr, char **write_buffer)
         return ERR;
 
     // allocate first chunk
-    buff_len = 27 + num_strlen(num) + 3; // FIXME:
-    buff     = calloc(buff_len, sizeof(*buff));
+    buff_len = 27 + num_strlen(num) + 3;
+    buff     = (char*)calloc(buff_len, sizeof(*buff));
     if (!buff)
     {
         PRINT_ERROR(E_STDLIB, 0);
@@ -292,11 +290,11 @@ int generate_output_string(int num, int *factori_arr, char **write_buffer)
     for (int i = 0; factori_arr[i]; i++)
     {
         buff_len += num_strlen(factori_arr[i]) + 2;
-        temp_buff = realloc(buff, buff_len);
+        temp_buff = (char*)realloc(buff, buff_len);
         if (!temp_buff)
         {
             PRINT_ERROR(E_STDLIB, 0);
-            free(buff); // FIXME:
+            free(buff);
             return ERR;
         }
         sprintf_s(temp_buff + strlen(temp_buff),
@@ -305,7 +303,7 @@ int generate_output_string(int num, int *factori_arr, char **write_buffer)
         buff = temp_buff;
     }
 
-    // EOL sequence
+    // EOL sequence overwites the last ", "
     buff[strlen(buff) - 2] = CR;
     buff[strlen(buff) - 1] = LF;
 
@@ -398,7 +396,7 @@ DWORD WINAPI factori_thread(LPVOID param)
         // check read_number_from_file() & read_release()
         CHECK_STATUS();
 
-        /* calc factori, build output str. if an error occures at factori(),
+        /* calc factori & build output str. if an error occures at factori(),
          * it will be detected by build_output_string() and status will be set */
         factori_arr = factori(number);
         status = generate_output_string(number, factori_arr, &write_buffer);
