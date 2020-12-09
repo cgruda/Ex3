@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+
 #include "tasks.h"
 #include "Lock.h"
 #include "Factori.h"
@@ -147,10 +148,6 @@ int check_input(struct enviroment *env, int argc, char** argv)
     if (ret_val != OK)
         print_usage();
 
-    DBG_PRINT("input: path1=%s, path2=%s, n_lines=%d, n_threads=%d\n", args->path1,
-                                                                       args->path2,
-                                                                       args->n_lines,
-                                                                       args->n_threads);
     return ret_val;
 }
 
@@ -202,7 +199,7 @@ int init_factori(struct enviroment *p_env)
     struct Queue *p_queue = p_env->p_queue;
     struct Lock  *p_lock  = p_env->p_lock;
 
-    // init read-write lock
+    // init readers-writer lock
     if (!(p_env->p_lock = InitializeLock()))
         return ERR;
 
@@ -253,11 +250,11 @@ int create_factori_threads(struct enviroment *p_env)
     for (int i = 0; i < p_env->args.n_threads; ++i)
     {
         p_env->p_h_threads[i] = CreateThread(NULL,
-                                      0,
-                                      factori_thread,
-                                      (LPVOID)&p_env->thread_args,
-                                      0,
-                                      NULL);
+                                             0,
+                                             factori_thread,
+                                             (LPVOID)&p_env->thread_args,
+                                             0,
+                                             NULL);
         if (!p_env->p_h_threads[i])
         {
             PRINT_ERROR(E_WINAPI, 0);
@@ -267,7 +264,7 @@ int create_factori_threads(struct enviroment *p_env)
         p_env->threads_created++;
     }
 
-    // if not all were created set abort event
+    // case not all threads were created -> set abort event
     if (p_env->threads_created < p_env->args.n_threads)
     {
         if (!SetEvent(p_env->h_abort_evt))
@@ -278,7 +275,6 @@ int create_factori_threads(struct enviroment *p_env)
     }
 
     DBG_PRINT("create_factori_threads OK\n");
-    DBG_PRINT("==========================================\n");
     return OK;
 }
 
@@ -286,17 +282,17 @@ int create_factori_threads(struct enviroment *p_env)
 
 int wait_for_factori_threads(struct enviroment *p_env)
 {
-    int n_threads = p_env->threads_created;
+    int threads_created = p_env->threads_created;
     DWORD wait_code;
     DWORD exit_code;
     int status = ERR;
 
     // return ERR so that main will return ERR
-    if (p_env->threads_created == 0)
+    if (threads_created == 0)
         return ERR;
 
-    // wait for created threads to end
-    wait_code = WaitForMultipleObjects(n_threads, p_env->p_h_threads, TRUE, MAX_WAIT_TIME_ALL_MS);
+    // wait for threads to end
+    wait_code = WaitForMultipleObjects(threads_created, p_env->p_h_threads, TRUE, MAX_WAIT_TIME_ALL_MS);
     switch (wait_code)
     {
     case WAIT_OBJECT_0:
@@ -312,11 +308,11 @@ int wait_for_factori_threads(struct enviroment *p_env)
         return ERR;
     }
 
-    //threads must be done since already had abort event
+    // in this case threads have already been aborted and waited
     if (p_env->threads_created < p_env->args.n_threads)
         return ERR;
 
-    // not all threads ended on time - try abort
+    // not all threads ended on time -> try abort
     if (status == ERR)
     {
         if (!SetEvent(p_env->h_abort_evt))
@@ -324,8 +320,9 @@ int wait_for_factori_threads(struct enviroment *p_env)
             PRINT_ERROR(E_WINAPI, 0);
             return ERR;
         }
-        
-        if (WaitForMultipleObjects(n_threads, p_env->p_h_threads, TRUE, 20) == WAIT_FAILED)
+
+        // wait and deal with error
+        if (WaitForMultipleObjects(threads_created, p_env->p_h_threads, TRUE, 20) == WAIT_FAILED)
             PRINT_ERROR(E_WINAPI, 0);
 
         // return ERR in any case
@@ -333,7 +330,7 @@ int wait_for_factori_threads(struct enviroment *p_env)
     }
 
     // all threads ended on time, get exit codes
-    for (int i = 0; i < n_threads; ++i)
+    for (int i = 0; i < threads_created; ++i)
     {
         if(!GetExitCodeThread(p_env->p_h_threads[i], &exit_code))
         {
@@ -341,12 +338,11 @@ int wait_for_factori_threads(struct enviroment *p_env)
             return ERR;
         }
 
-        // thread failed, dont care about others
+        // thread failed - result is ERR (dont care about other threads)
         if (exit_code != THREAD_STATUS_SUCCESS)
             return ERR;
     }
 
-    DBG_PRINT("==========================================\n");
     DBG_PRINT("wait_for_factori_threads OK\n");
     return OK;
 }
@@ -387,14 +383,10 @@ int cleanup_factori(struct enviroment *p_env)
     }
 
     if (!DestroyQueue(&p_env->p_queue))
-    {
         status = ERR;
-    }
 
     if (!DestroyLock(&p_env->p_lock))
-    {
         status = ERR;
-    }
 
     DBG_PRINT("cleanup ret=%d\n", status);
     return status;

@@ -17,13 +17,11 @@
 #include "Queue.h"
 #include "tasks.h"
 
-
 /*
  ==============================================================================
  * FUNCTION DEFENITIONS
  ==============================================================================
  */
-
 struct Task *InitializeTask(int offset)
 {
     struct Task *p_task;
@@ -81,10 +79,7 @@ struct Task *Pop(struct Queue *p_queue)
         return NULL;
 
     if (Empty(p_queue))
-    {
-        DBG_PRINT("Queue is empty\n");
         return NULL;
-    }
 
     p_task = p_queue->head;
     p_queue->head = p_task->next;

@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "Shlwapi.h"
+
 #include "Queue.h"
 
 
@@ -34,7 +35,6 @@
  * DEFINES
  ==============================================================================
  */
-
 // debug prints enable
 #define DBG_ENABLE     1
 
@@ -64,13 +64,11 @@
 #define E_MSG_BUF_FULL "Buffer is full\n"
 #define E_MSG_INPT_ERR "Input file has bad values\n"
 
-
 /*
  ==============================================================================
  * ENUMERATIONS
  ==============================================================================
  */
-
 enum err_value
 {
     E_INTERNAL,
@@ -78,15 +76,13 @@ enum err_value
     E_STDLIB
 };
 
-
 /*
  ==============================================================================
  * MACROS
  ==============================================================================
  */
-
 // debug stamp [file,function,line]
-#define DBG_STAMP()     printf("[%-9s; %-24s; %-3d] ", __FILENAME__, __func__, __LINE__)
+#define DBG_STAMP()     printf("[%-9s;%-3d]  ", __FILENAME__, __LINE__)
 
 // for debuging
 #if DBG_ENABLE
@@ -98,13 +94,11 @@ enum err_value
 // print error message
 #define PRINT_ERROR(err_val, err_msg)   do {DBG_STAMP(); print_error((err_val), (err_msg));} while (0)
 
-
 /*
  ==============================================================================
  * STRUCTURES
  ==============================================================================
  */
-
 struct args
 {
     char* path1;
@@ -139,13 +133,11 @@ struct enviroment
     struct thread_args thread_args;
 };
 
-
 /*
  ==============================================================================
  * DECLARATIONS
  ==============================================================================
  */
-
 /**
  ******************************************************************************
  * @brief convert string to integer

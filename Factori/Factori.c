@@ -13,23 +13,19 @@
  * INCLUDES
  ==============================================================================
  */
-
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "Queue.h"
 #include "Factori.h"
 #include "Lock.h"
-
 
 /*
  ==============================================================================
  * FUNCTION DEFENITIONS
  ==============================================================================
  */
-
 int create_file_handle(HANDLE *h_file, char *path)
 {
     *h_file = CreateFileA(path,                               // File Name
@@ -52,7 +48,7 @@ int create_file_handle(HANDLE *h_file, char *path)
 
 int check_abort_evt(HANDLE h_abort_evt)
 {
-    int status;
+    int status = THREAD_STATUS_CONTINUE;
     DWORD wait_code;
 
     wait_code = WaitForSingleObject(h_abort_evt, 0);
@@ -79,7 +75,7 @@ int check_abort_evt(HANDLE h_abort_evt)
 
 int wait_for_queue_mtx(HANDLE h_queue_mtx)
 {
-    int status;
+    int status = ERR;
     DWORD wait_code;
 
     wait_code = WaitForSingleObject(h_queue_mtx, QUEUE_POP_MAX_WAIT_MS);
@@ -92,7 +88,6 @@ int wait_for_queue_mtx(HANDLE h_queue_mtx)
         PRINT_ERROR(E_WINAPI, 0);
         // FALL THROUGH
     case WAIT_ABANDONED:
-        // FALL THROUGH
     case WAIT_TIMEOUT:
         status = ERR;
         break;
@@ -184,6 +179,7 @@ int *factori(int num)
     if (num == 1)
     {
         *ptr = 1;
+        pos++;
         new_ptr = (int*)realloc(ptr, 2 * sizeof(int));
         if (!new_ptr)
         {
@@ -341,13 +337,11 @@ int print_line_to_file(HANDLE *h_file, char **write_buffer)
 DWORD WINAPI factori_thread(LPVOID param)
 {
     struct thread_args *args = (struct thread_args*)(param);
-    struct Queue *p_queue    = args->p_queue;
-    struct Lock  *p_lock     = args->p_lock;
-    struct Task  *p_task     = NULL;
-    HANDLE h_file            = NULL;
-    char *write_buffer       = NULL;
-    int status = THREAD_STATUS_CONTINUE;
-    int number, *factori_arr;
+    struct Task *p_task = NULL;
+    char *write_buffer  = NULL;
+    int *factori_arr    = NULL;
+    HANDLE h_file       = NULL;
+    int number, status  = THREAD_STATUS_CONTINUE;
 
     // open file for read and write
     status = create_file_handle(&h_file, args->path);
@@ -361,15 +355,13 @@ DWORD WINAPI factori_thread(LPVOID param)
 
         // acquire exclusive pop access
         status = wait_for_queue_mtx(*(args->p_h_queue_mtx));
-        DBG_PRINT("wait_for_queue_mtx=%d\n",status);
         CHECK_STATUS();
 
         // pop task from queue
-        p_task = Pop(p_queue);
+        p_task = Pop(args->p_queue);
 
         // release queue mutex
         status = release_queue_mtx(*(args->p_h_queue_mtx));
-        DBG_PRINT("release_queue_mtx=%d\n",status);
         CHECK_STATUS();
 
         // if queue is empty, we are done
@@ -380,46 +372,37 @@ DWORD WINAPI factori_thread(LPVOID param)
         }
 
         // acquire read access
-        status = read_lock(p_lock);
-        DBG_PRINT("read_lock=%d\n",status);
+        status = read_lock(args->p_lock);
         CHECK_STATUS();
 
         // read line from file
         status = read_number_from_file(h_file, &p_task, &number);
-        DBG_PRINT("read_number_from_file=%d, number=%d\n", status, number);
 
         // release read
-        if (read_release(p_lock) != OK)
+        if (read_release(args->p_lock) != OK)
             status = THREAD_STATUS_ERR;
-        DBG_PRINT("read_release=%d\n", status);
 
         // check read_number_from_file() & read_release()
         CHECK_STATUS();
 
-        /* calc factori & build output str. if an error occures at factori(),
-         * it will be detected by build_output_string() and status will be set */
         factori_arr = factori(number);
         status = generate_output_string(number, factori_arr, &write_buffer);
-        DBG_PRINT("generate_output_string=%d, string=%s\n", status, write_buffer);
         CHECK_STATUS();
 
         // acquire exclusive write access
-        status = write_lock(p_lock);
-        DBG_PRINT("write_lock=%d\n", status);
+        status = write_lock(args->p_lock);
         CHECK_STATUS();
 
+        DBG_PRINT("%s\n", write_buffer);
         // write output (and free write buffer)
         status = print_line_to_file(h_file, &write_buffer);
-        DBG_PRINT("print_line_to_file=%d\n", status);
 
         // release write lock
-        if (write_release(p_lock) != OK)
+        if (write_release(args->p_lock) != OK)
             status = THREAD_STATUS_ERR;
-        DBG_PRINT("write_release=%d\n", status);
     }
 
-    // cleanup
-    DBG_PRINT("thread_cleanup\n");
+    // thread cleanup
     if (h_file)
     {
         if (!CloseHandle(h_file))

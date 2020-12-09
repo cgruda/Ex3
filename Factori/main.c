@@ -12,6 +12,7 @@
  * INCLUDES
  ==============================================================================
  */
+
 #include "tasks.h"
 #include "factori.h"
 
@@ -24,11 +25,9 @@
 
 int main(int argc, char **argv)
 {
-    DBG_PRINT("==========================================\n");
     struct enviroment env = {0};
     int ret_val = ERR;
 
-    // check input args
     if (!check_input(&env, argc, argv))
         return ERR;
 
@@ -38,28 +37,22 @@ int main(int argc, char **argv)
         if (!init_factori(&env))
             break;
 
-        // fill queue
         if (!fill_factori_queue(&env))
             break;
 
-        // start factori threads
         if (!create_factori_threads(&env))
             break;
 
-        // wait for factori threads to end
         if (!wait_for_factori_threads(&env))
             break;
 
-        // if got here then success
         ret_val = OK;
 
     } while (0);
 
-    // free resources
     if (!cleanup_factori(&env))
         ret_val = ERR;
 
-    DBG_PRINT("exit=%d\n", ret_val);
-    DBG_PRINT("==========================================\n");
+    DBG_PRINT("ret_val=%d\n", ret_val);
     return ret_val;
 }
