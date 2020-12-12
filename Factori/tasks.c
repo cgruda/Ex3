@@ -151,29 +151,28 @@ int check_input(struct enviroment *env, int argc, char** argv)
 
 int init_factori(struct enviroment *p_env)
 {
-    struct Queue *p_queue = p_env->p_queue;
-    struct Lock  *p_lock  = p_env->p_lock;
+    int ret_val = OK;
 
     // init readers-writer lock
     if (!(p_env->p_lock = InitializeLock()))
-        return ERR;
+        ret_val = ERR;
 
     // init tasks queue
     if (!(p_env->p_queue = InitializeQueue()))
-        return ERR;
+        ret_val = ERR;
 
     // init queue mutex
     if (!(p_env->h_queue_mtx = CreateMutex(NULL, FALSE, NULL)))
     {
         PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
-        return ERR;
+        ret_val = ERR;
     }
 
     // init abort event
     if (!(p_env->h_abort_evt = CreateEvent(NULL, TRUE, FALSE, NULL)))
     {
         PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
-        return ERR;
+        ret_val = ERR;
     }
 
     // allocate mem for thread handles
@@ -181,9 +180,8 @@ int init_factori(struct enviroment *p_env)
     if (!p_env->p_h_threads)
     {
         PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
-        return ERR;
+        ret_val = ERR;
     }
-    for (int i = 0; i < p_env->args.n_threads; p_env->p_h_threads[i++] = 0);
 
     // fill thread args struct
     p_env->thread_args.p_h_abort_evt = &p_env->h_abort_evt;
@@ -192,8 +190,7 @@ int init_factori(struct enviroment *p_env)
     p_env->thread_args.p_lock        = p_env->p_lock;
     p_env->thread_args.path          = p_env->args.path1;
 
-    DBG_PRINT("factori init complete\n");
-    return OK;
+    return ret_val;
 }
 
 //==============================================================================
@@ -207,6 +204,12 @@ int fill_factori_queue(struct enviroment *p_env)
     int ret_val = OK;
 
     if (fopen_s(&fp, p_env->args.path2, "r"))
+    {
+        PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
+        return ERR;
+    }
+
+    if (!fp)
     {
         PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
         return ERR;
@@ -237,7 +240,6 @@ int fill_factori_queue(struct enviroment *p_env)
     }
 
     fclose(fp);
-    DBG_PRINT("fill_factori_queue=%d\n", ret_val);
     return ret_val;
 }
 
@@ -271,7 +273,6 @@ int create_factori_threads(struct enviroment *p_env)
         if (!SetEvent(p_env->h_abort_evt))
             PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
 
-    DBG_PRINT("create_factori_threads=%d\n", ret_val);
     return ret_val;
 }
 
@@ -335,7 +336,6 @@ int wait_for_factori_threads(struct enviroment *p_env)
         break;
     }
 
-    DBG_PRINT("wait_for_factori_threads=%d\n", ret_val);
     return ret_val;
 }
 
@@ -347,15 +347,12 @@ int cleanup_factori(struct enviroment *p_env)
 
     if (p_env->p_h_threads)
     {
-        for (int i = 0; i < p_env->args.n_threads; ++i)
+        for (int i = 0; i < p_env->threads_created; ++i)
         {
-            if (p_env->p_h_threads[i])
+            if (!CloseHandle(p_env->p_h_threads[i]))
             {
-                if (!CloseHandle(p_env->p_h_threads[i]))
-                {
-                    PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
-                    status = ERR;
-                }
+                PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
+                status = ERR;
             }
         }
 
@@ -380,6 +377,5 @@ int cleanup_factori(struct enviroment *p_env)
     if (!DestroyLock(&p_env->p_lock))
         status = ERR;
 
-    DBG_PRINT("cleanup ret=%d\n", status);
     return status;
 }

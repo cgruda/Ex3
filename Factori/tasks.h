@@ -33,7 +33,7 @@
  ==============================================================================
  */
 // debug prints enable
-#define DBG_ENABLE     1
+#define DBG_ENABLE     0
 
 // input arguments count
 #define ARGC           5

@@ -12,7 +12,6 @@
  * INCLUDES
  ==============================================================================
  */
-
 #include "tasks.h"
 #include "factori.h"
 
@@ -51,6 +50,5 @@ int main(int argc, char **argv)
     if (!cleanup_factori(&env))
         ret_val = ERR;
 
-    DBG_PRINT("ret_val=%d\n", ret_val);
     return ret_val;
 }

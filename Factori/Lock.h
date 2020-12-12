@@ -13,7 +13,6 @@
 #ifndef __LOCK_H__
 #define __LOCK_H__
 
-
 /*
  ==============================================================================
  * INCLUDES
@@ -27,7 +26,6 @@
  * DEFINES
  ==============================================================================
  */
-
 #define MAX_WAIT_MS_R   (20 * SEC2MS)
 #define MAX_WAIT_MS_W   (20 * SEC2MS)
 
@@ -39,7 +37,6 @@
  * STRUCTURES
  ==============================================================================
  */
-
 struct Lock
 {
     HANDLE h_read_mtx;
@@ -52,7 +49,6 @@ struct Lock
  * MACROS
  ==============================================================================
  */
-
 /**
  ******************************************************************************
  * @brief better readability for wait code handling. use in Lock module only.
@@ -62,7 +58,6 @@ struct Lock
  * @param wait_code
  ******************************************************************************
  */
-
 #define LOCK_WAIT_CODE_CHECK(wait_code)          \
 {                                                \
     switch (wait_code)                           \
@@ -86,7 +81,6 @@ struct Lock
  * FUNCTION DECLARATIONS
  ==============================================================================
  */
-
 /**
  ******************************************************************************
  * @brief  initialize a Lock object, containing a Mutex, Semaphore, and counter
@@ -139,6 +133,5 @@ int write_release(struct Lock *p_lock);
  ******************************************************************************
  */
 int DestroyLock(struct Lock **p_lock);
-
 
 #endif // __LOCK_H__

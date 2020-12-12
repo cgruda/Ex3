@@ -66,7 +66,6 @@ struct Task *Pop(struct Queue *p_queue)
     p_queue->head = p_task->next;
     p_queue->cnt--;
 
-    // DBG_PRINT("Pop %d (0x%p), queue_cnt=%d\n", p_task->offset, p_task, p_queue->cnt);
     return p_task;
 }
 
@@ -87,7 +86,6 @@ int Push(struct Queue *p_queue, struct Task *p_task)
     p_queue->tail = p_task;
     p_queue->cnt++;
 
-    // DBG_PRINT("Push %d (0x%p), queue_cnt=%d\n", p_task->offset, p_task, p_queue->cnt);
     return OK;
 }
 
