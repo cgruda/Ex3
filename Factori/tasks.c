@@ -4,9 +4,7 @@
  * ISP_HW_3_2020
  *
  * this module contains functions that are called from main.c
- * as well as my_atoi which is called also by factori.c
- * these function implement the main flow in portions.
- * also global defines and macros are contained in this module.
+ * these function implement the main flow.
  * 
  * by: Chaim Gruda
  *     Nir Beiber
@@ -66,8 +64,8 @@ int my_atoi(char *str, int *p_result)
 void print_usage()
 {
     printf("\nusage:\n\tfactori.exe [path1] [path2] [n] [m]\n\n"
-           "\t[file1] - path to tasks file         \n"
-           "\t[file2] - path to priorities file    \n"
+           "\t[path1] - path to tasks file         \n"
+           "\t[path2] - path to priorities file    \n"
            "\t[n]     - number of lines in file    \n"
            "\t[m]     - number of threads to use   \n\n");
 }
