@@ -22,25 +22,6 @@
  * FUNCTION DEFENITIONS
  ==============================================================================
  */
-struct Task *InitializeTask(int offset)
-{
-    struct Task *p_task;
-
-    p_task = (struct Task*)calloc(1, sizeof(*p_task));
-    if (!p_task)
-    {
-        PRINT_ERROR(E_STDLIB, 0);
-        return NULL;
-    }
-
-    p_task->next = NULL;
-    p_task->offset = offset;
-
-    return p_task;;
-}   
-
-//==============================================================================
-
 struct Queue *InitializeQueue()
 {
     struct Queue *p_queue;
@@ -48,7 +29,7 @@ struct Queue *InitializeQueue()
     p_queue = (struct Queue*)calloc(1, sizeof(*p_queue));
     if (!p_queue)
     {
-        PRINT_ERROR(E_STDLIB, 0);
+        PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
         return NULL;
     }
 
@@ -85,7 +66,7 @@ struct Task *Pop(struct Queue *p_queue)
     p_queue->head = p_task->next;
     p_queue->cnt--;
 
-    DBG_PRINT("Pop %d (0x%p), queue_cnt=%d\n", p_task->offset, p_task, p_queue->cnt);
+    // DBG_PRINT("Pop %d (0x%p), queue_cnt=%d\n", p_task->offset, p_task, p_queue->cnt);
     return p_task;
 }
 
@@ -106,7 +87,7 @@ int Push(struct Queue *p_queue, struct Task *p_task)
     p_queue->tail = p_task;
     p_queue->cnt++;
 
-    DBG_PRINT("Push %d (0x%p), queue_cnt=%d\n", p_task->offset, p_task, p_queue->cnt);
+    // DBG_PRINT("Push %d (0x%p), queue_cnt=%d\n", p_task->offset, p_task, p_queue->cnt);
     return OK;
 }
 

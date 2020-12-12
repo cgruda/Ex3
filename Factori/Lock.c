@@ -36,7 +36,7 @@ struct Lock *InitializeLock()
     p_lock = (struct Lock*)calloc(1, sizeof(*p_lock));
     if (!p_lock)
     {
-        PRINT_ERROR(E_STDLIB, 0);
+        PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
         return ERR;
     }
 
@@ -44,7 +44,7 @@ struct Lock *InitializeLock()
     p_lock->h_read_mtx = CreateMutexA(NULL, FALSE, MUTX_R);
     if (!p_lock->h_read_mtx)
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         status = ERR;
     }
 
@@ -52,7 +52,7 @@ struct Lock *InitializeLock()
     p_lock->h_global_smpr = CreateSemaphoreA(NULL, 1, 1, SMPR_G);
     if (!p_lock->h_global_smpr)
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         status = ERR;
     }
 
@@ -92,7 +92,7 @@ int read_lock(struct Lock *p_lock)
     // release readers mutx, allowing others to start read
     if(!ReleaseMutex(p_lock->h_read_mtx))
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
@@ -123,7 +123,7 @@ int read_release(struct Lock *p_lock)
     {
         if(!ReleaseSemaphore(p_lock->h_global_smpr, 1, NULL))
         {
-            PRINT_ERROR(E_WINAPI, 0);
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
             return ERR;
         }
     }
@@ -169,7 +169,7 @@ int write_release(struct Lock *p_lock)
     // release global semaphore, allowing others to get write or read access
     if (!ReleaseSemaphore(p_lock->h_global_smpr, 1, NULL))
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
@@ -194,7 +194,7 @@ int DestroyLock(struct Lock **p_lock)
     {
         if (!CloseHandle((*p_lock)->h_read_mtx))
         {
-            PRINT_ERROR(E_WINAPI, 0);
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
             ret_val = ERR;
         }
     }
@@ -204,7 +204,7 @@ int DestroyLock(struct Lock **p_lock)
     {
         if (!CloseHandle((*p_lock)->h_global_smpr))
         {
-            PRINT_ERROR(E_WINAPI, 0);
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
             ret_val = ERR;
         }
     }

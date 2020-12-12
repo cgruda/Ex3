@@ -15,7 +15,6 @@
 // for using PathFileExistsA()
 #pragma comment(lib, "Shlwapi.lib")
 
-
 /*
  ==============================================================================
  * INCLUDES
@@ -26,9 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "Shlwapi.h"
-
 #include "Queue.h"
-
 
 /*
  ==============================================================================
@@ -50,19 +47,19 @@
 
 // wating times
 #define MAX_WAIT_TIME_ALL_MS (10 * MIN2SEC * SEC2MS)
-#define WAIT_0_MS       0
-#define SEC2MS          1000
-#define MIN2SEC         60
+#define SEC2MS               1000
+#define MIN2SEC              60
 
 // for printing
 #define CR 0xD
 #define LF 0xA
 
 // error messages
-#define E_MSG_NULL_PTR "Null Pointer\n"
-#define E_MSG_MAX_WAIT "Max Wait-time passed\n"
-#define E_MSG_BUF_FULL "Buffer is full\n"
-#define E_MSG_INPT_ERR "Input file has bad values\n"
+#define E_MSG_NULL_MSG 0
+#define E_MSG_NULL_PTR "Null Pointer"
+#define E_MSG_MAX_WAIT "Max Wait-time passed"
+#define E_MSG_BUF_FULL "Buffer is full"
+#define E_MSG_INPT_ERR "Input file has bad values"
 
 /*
  ==============================================================================
@@ -218,6 +215,5 @@ int wait_for_factori_threads(struct enviroment *p_env);
  ******************************************************************************
  */
 int cleanup_factori(struct enviroment *p_env);
-
 
 #endif // __TASKS_H__

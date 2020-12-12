@@ -70,10 +70,12 @@ struct Lock
     case WAIT_OBJECT_0:                          \
         break;                                   \
     case WAIT_FAILED:                            \
-        PRINT_ERROR(E_WINAPI, 0);                \
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);                \
         return ERR;                              \
-    default:                                     \
+    case WAIT_TIMEOUT:                           \
         PRINT_ERROR(E_INTERNAL, E_MSG_MAX_WAIT); \
+        return ERR;                              \
+    case WAIT_ABANDONED:                         \
         return ERR;                              \
     }                                            \
 }

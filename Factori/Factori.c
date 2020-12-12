@@ -20,6 +20,7 @@
 #include "Queue.h"
 #include "Factori.h"
 #include "Lock.h"
+#include "tasks.h"
 
 /*
  ==============================================================================
@@ -37,7 +38,7 @@ int create_file_handle(HANDLE *h_file, char *path)
                           NULL);                              // Template File
     if (h_file == INVALID_HANDLE_VALUE)
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
@@ -51,6 +52,7 @@ int check_abort_evt(HANDLE h_abort_evt)
     int status = THREAD_STATUS_CONTINUE;
     DWORD wait_code;
 
+    // wait 0 ms to check if need to abort
     wait_code = WaitForSingleObject(h_abort_evt, 0);
     switch (wait_code)
     {
@@ -61,7 +63,7 @@ int check_abort_evt(HANDLE h_abort_evt)
         status = THREAD_STATUS_ABORT;
         break;
     case WAIT_FAILED:
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         // FALL THROUGH
     case WAIT_ABANDONED:
         status = THREAD_STATUS_ERR;
@@ -85,9 +87,10 @@ int wait_for_queue_mtx(HANDLE h_queue_mtx)
         status = OK;
         break;
     case WAIT_FAILED:
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         // FALL THROUGH
     case WAIT_ABANDONED:
+        // FALL THROUGH
     case WAIT_TIMEOUT:
         status = ERR;
         break;
@@ -102,7 +105,7 @@ int release_queue_mtx(HANDLE h_queue_mtx)
 {
     if (!ReleaseMutex(h_queue_mtx))
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
@@ -125,7 +128,7 @@ int read_number_from_file(HANDLE h_file, struct Task **p_task, int *number)
     // set start position
     if (SetFilePointer(h_file, offset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
@@ -134,7 +137,7 @@ int read_number_from_file(HANDLE h_file, struct Task **p_task, int *number)
         // read 1 char at a time
         if(!ReadFile(h_file, &c, 1, NULL, NULL))
         {
-            PRINT_ERROR(E_WINAPI, 0);
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
             status = ERR;
             break;
         }
@@ -153,6 +156,14 @@ int read_number_from_file(HANDLE h_file, struct Task **p_task, int *number)
 
         *number *= 10;
         *number += (c - '0');
+
+        // integer overflow
+        if (*number < 0)
+        {
+            PRINT_ERROR(E_INTERNAL, E_MSG_INPT_ERR);
+            status = ERR;
+            break;
+        }
     }
 
     return status;
@@ -166,28 +177,16 @@ int *factori(int num)
     int *ptr, *new_ptr;
 
     if (num == 0)
+    {
+        PRINT_ERROR(E_INTERNAL, E_MSG_INPT_ERR);
         return NULL;
+    }
 
     ptr = (int*)calloc(1, sizeof(*ptr));
     if (!ptr)
     {
-        PRINT_ERROR(E_STDLIB, 0);
+        PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
         return NULL;
-    }
-
-    // edge case
-    if (num == 1)
-    {
-        *ptr = 1;
-        pos++;
-        new_ptr = (int*)realloc(ptr, 2 * sizeof(int));
-        if (!new_ptr)
-        {
-            PRINT_ERROR(E_STDLIB, 0);
-            free(ptr);
-            return NULL;
-        }
-        ptr = new_ptr;
     }
 
     // num is even
@@ -199,7 +198,7 @@ int *factori(int num)
         new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
         if (!new_ptr)
         {
-            PRINT_ERROR(E_STDLIB, 0);
+            PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
             free(ptr);
             return NULL;
         }
@@ -217,7 +216,7 @@ int *factori(int num)
             new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
             if (!new_ptr)
             {
-                PRINT_ERROR(E_STDLIB, 0);
+                PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
                 free(ptr);
                 return NULL;
             }
@@ -233,7 +232,7 @@ int *factori(int num)
         new_ptr = (int*)realloc(ptr, (pos + 1) * sizeof(int));
         if (!new_ptr)
         {
-            PRINT_ERROR(E_STDLIB, 0);
+            PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
             free(ptr);
             return NULL;
         }
@@ -275,12 +274,29 @@ int generate_output_string(int num, int *factori_arr, char **write_buffer)
     buff     = (char*)calloc(buff_len, sizeof(*buff));
     if (!buff)
     {
-        PRINT_ERROR(E_STDLIB, 0);
+        PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
         return ERR;
     }
 
     // print first chunk into buffer
     sprintf_s(buff, buff_len, "The prime factors of %d are: ", num);
+
+    // empty group, allocate mem for EOL
+    if (!factori_arr[0])
+    {
+        buff_len += 2;
+        temp_buff = (char*)realloc(buff, buff_len);
+        if (!temp_buff)
+        {
+            PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
+            free(buff);
+            return ERR;
+        }
+        sprintf_s(temp_buff + strlen(temp_buff),
+                  buff_len  - strlen(temp_buff),
+                  "  ");
+        buff = temp_buff;
+    }
 
     // print factori array results into buffer
     for (int i = 0; factori_arr[i]; i++)
@@ -289,7 +305,7 @@ int generate_output_string(int num, int *factori_arr, char **write_buffer)
         temp_buff = (char*)realloc(buff, buff_len);
         if (!temp_buff)
         {
-            PRINT_ERROR(E_STDLIB, 0);
+            PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
             free(buff);
             return ERR;
         }
@@ -299,7 +315,7 @@ int generate_output_string(int num, int *factori_arr, char **write_buffer)
         buff = temp_buff;
     }
 
-    // EOL sequence overwites the last ", "
+    // EOL sequence overwite
     buff[strlen(buff) - 2] = CR;
     buff[strlen(buff) - 1] = LF;
 
@@ -316,14 +332,14 @@ int print_line_to_file(HANDLE *h_file, char **write_buffer)
     // seek end of file
     if (SetFilePointer(h_file, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
     // write output
     if (!WriteFile(h_file, *write_buffer, num_bytes, NULL, NULL))
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
@@ -364,7 +380,7 @@ DWORD WINAPI factori_thread(LPVOID param)
         status = release_queue_mtx(*(args->p_h_queue_mtx));
         CHECK_STATUS();
 
-        // if queue is empty, we are done
+        // if queue is empty we are done
         if (!p_task)
         {
             status = THREAD_STATUS_SUCCESS;
@@ -382,9 +398,10 @@ DWORD WINAPI factori_thread(LPVOID param)
         if (read_release(args->p_lock) != OK)
             status = THREAD_STATUS_ERR;
 
-        // check read_number_from_file() & read_release()
+        // check read_line & read_release
         CHECK_STATUS();
 
+        // calc factori and generate string
         factori_arr = factori(number);
         status = generate_output_string(number, factori_arr, &write_buffer);
         CHECK_STATUS();
@@ -393,7 +410,6 @@ DWORD WINAPI factori_thread(LPVOID param)
         status = write_lock(args->p_lock);
         CHECK_STATUS();
 
-        DBG_PRINT("%s\n", write_buffer);
         // write output (and free write buffer)
         status = print_line_to_file(h_file, &write_buffer);
 
@@ -402,12 +418,17 @@ DWORD WINAPI factori_thread(LPVOID param)
             status = THREAD_STATUS_ERR;
     }
 
+    // in case of error abort all threads
+    if (status == THREAD_STATUS_ERR)
+        if (!SetEvent(*(args->p_h_abort_evt)))
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
+
     // thread cleanup
     if (h_file)
     {
         if (!CloseHandle(h_file))
         {
-            PRINT_ERROR(E_WINAPI, 0);
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
             status = THREAD_STATUS_ERR;
         }
     }
@@ -416,6 +437,5 @@ DWORD WINAPI factori_thread(LPVOID param)
     if (p_task)
         free(p_task);
 
-    DBG_PRINT("thread_exit=%d\n", status);
     ExitThread((DWORD)status);
 }

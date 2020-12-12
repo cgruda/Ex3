@@ -17,23 +17,19 @@
  * INCLUDES
  ==============================================================================
  */
-
 #include <windows.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
-
 #include "tasks.h"
 #include "Lock.h"
 #include "Factori.h"
-
 
 /*
  ==============================================================================
  * FUNCTION DEFENITIONS
  ==============================================================================
  */
-
 int my_atoi(char *str, int *p_result)
 {
     if (!str || !p_result)
@@ -69,7 +65,7 @@ int my_atoi(char *str, int *p_result)
 
 void print_usage()
 {
-    printf("\nusage:\n\tfactori.exe [file-1] [file-2] [n] [m]\n\n"
+    printf("\nusage:\n\tfactori.exe [path1] [path2] [n] [m]\n\n"
            "\t[file1] - path to tasks file         \n"
            "\t[file2] - path to priorities file    \n"
            "\t[n]     - number of lines in file    \n"
@@ -153,47 +149,6 @@ int check_input(struct enviroment *env, int argc, char** argv)
 
 //==============================================================================
 
-int fill_factori_queue(struct enviroment *p_env)
-{
-    FILE *fp              = NULL;
-    struct Task  *p_task  = NULL;
-    struct Queue *p_queue = NULL;
-    int offset_val;
-    int ret_val = OK;
-
-    if (fopen_s(&fp, p_env->args.path2, "r"))
-    {
-        PRINT_ERROR(E_STDLIB, 0);
-        return ERR;
-    }
-
-    p_queue = p_env->p_queue;
-
-    for (int i = 0; i < p_env->args.n_lines; ++i)
-    {
-        fscanf_s(fp, "%d\n", &offset_val);
-
-        p_task = InitializeTask(offset_val);
-        if (!p_task)
-        {
-            ret_val = ERR;
-            break;
-        }
-
-        if (!Push(p_queue, p_task))
-        {
-            ret_val = ERR;
-            break;
-        }
-    }
-
-    fclose(fp);
-    DBG_PRINT("fill factori ret=%d\n", ret_val);
-    return ret_val;
-}
-
-//==============================================================================
-
 int init_factori(struct enviroment *p_env)
 {
     struct Queue *p_queue = p_env->p_queue;
@@ -210,14 +165,14 @@ int init_factori(struct enviroment *p_env)
     // init queue mutex
     if (!(p_env->h_queue_mtx = CreateMutex(NULL, FALSE, NULL)))
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
     // init abort event
-    if (!(p_env->h_abort_evt = CreateEvent(NULL, FALSE, FALSE, NULL)))
+    if (!(p_env->h_abort_evt = CreateEvent(NULL, TRUE, FALSE, NULL)))
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         return ERR;
     }
 
@@ -225,7 +180,7 @@ int init_factori(struct enviroment *p_env)
     p_env->p_h_threads = (HANDLE*)calloc(p_env->args.n_threads, sizeof(HANDLE));
     if (!p_env->p_h_threads)
     {
-        PRINT_ERROR(E_STDLIB, 0);
+        PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
         return ERR;
     }
     for (int i = 0; i < p_env->args.n_threads; p_env->p_h_threads[i++] = 0);
@@ -237,14 +192,60 @@ int init_factori(struct enviroment *p_env)
     p_env->thread_args.p_lock        = p_env->p_lock;
     p_env->thread_args.path          = p_env->args.path1;
 
-    DBG_PRINT("factori init\n");
+    DBG_PRINT("factori init complete\n");
     return OK;
+}
+
+//==============================================================================
+
+int fill_factori_queue(struct enviroment *p_env)
+{
+    FILE *fp              = NULL;
+    struct Task  *p_task  = NULL;
+    struct Queue *p_queue = NULL;
+    int offset_val;
+    int ret_val = OK;
+
+    if (fopen_s(&fp, p_env->args.path2, "r"))
+    {
+        PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
+        return ERR;
+    }
+
+    p_queue = p_env->p_queue;
+
+    for (int i = 0; i < p_env->args.n_lines; ++i)
+    {
+        fscanf_s(fp, "%d\n", &offset_val);
+
+        p_task = (struct Task*)calloc(1, sizeof(*p_task));
+        if (!p_task)
+        {
+            PRINT_ERROR(E_STDLIB, E_MSG_NULL_MSG);
+            ret_val = ERR;
+            break;
+        }
+
+        p_task->offset = offset_val;
+        p_task->next = NULL;
+
+        if (!Push(p_queue, p_task))
+        {
+            ret_val = ERR;
+            break;
+        }
+    }
+
+    fclose(fp);
+    DBG_PRINT("fill_factori_queue=%d\n", ret_val);
+    return ret_val;
 }
 
 //==============================================================================
 
 int create_factori_threads(struct enviroment *p_env)
 {
+    int ret_val = OK;
     p_env->threads_created = 0;
 
     for (int i = 0; i < p_env->args.n_threads; ++i)
@@ -257,7 +258,8 @@ int create_factori_threads(struct enviroment *p_env)
                                              NULL);
         if (!p_env->p_h_threads[i])
         {
-            PRINT_ERROR(E_WINAPI, 0);
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
+            ret_val = OK;
             break;
         }
 
@@ -266,16 +268,11 @@ int create_factori_threads(struct enviroment *p_env)
 
     // case not all threads were created -> set abort event
     if (p_env->threads_created < p_env->args.n_threads)
-    {
         if (!SetEvent(p_env->h_abort_evt))
-        {
-            PRINT_ERROR(E_WINAPI, 0);
-            return ERR;
-        }
-    }
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
 
-    DBG_PRINT("create_factori_threads OK\n");
-    return OK;
+    DBG_PRINT("create_factori_threads=%d\n", ret_val);
+    return ret_val;
 }
 
 //==============================================================================
@@ -285,7 +282,7 @@ int wait_for_factori_threads(struct enviroment *p_env)
     int threads_created = p_env->threads_created;
     DWORD wait_code;
     DWORD exit_code;
-    int status = ERR;
+    int ret_val = OK;
 
     // return ERR so that main will return ERR
     if (threads_created == 0)
@@ -296,55 +293,50 @@ int wait_for_factori_threads(struct enviroment *p_env)
     switch (wait_code)
     {
     case WAIT_OBJECT_0:
-        status = OK;
+        // all threads ended on time, get exit codes
+        for (int i = 0; i < threads_created; ++i)
+        {
+            if (!GetExitCodeThread(p_env->p_h_threads[i], &exit_code))
+            {
+                PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
+                ret_val = ERR;
+                break;
+            }
+
+            // thread failed - result is ERR (dont care about other threads)
+            if (exit_code != THREAD_STATUS_SUCCESS)
+            {
+                ret_val = ERR;
+                break;
+            }
+        }
+        break;
+    case WAIT_FAILED:
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
+        ret_val = ERR;
         break;
     case WAIT_ABANDONED:
         // FALL THROUGH
     case WAIT_TIMEOUT:
-        status = ERR;
-        break;
-    case WAIT_FAILED:
-        PRINT_ERROR(E_WINAPI, 0);
-        return ERR;
-    }
+        // not all threads ended -> abort
+        ret_val = ERR;
 
-    // in this case threads have already been aborted and waited
-    if (p_env->threads_created < p_env->args.n_threads)
-        return ERR;
-
-    // not all threads ended on time -> try abort
-    if (status == ERR)
-    {
         if (!SetEvent(p_env->h_abort_evt))
         {
-            PRINT_ERROR(E_WINAPI, 0);
-            return ERR;
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
+            break;
         }
-
-        // wait and deal with error
+        
+        // wait 20 ms
         if (WaitForMultipleObjects(threads_created, p_env->p_h_threads, TRUE, 20) == WAIT_FAILED)
-            PRINT_ERROR(E_WINAPI, 0);
+            PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
 
-        // return ERR in any case
-        return ERR;
+        ret_val = ERR;
+        break;
     }
 
-    // all threads ended on time, get exit codes
-    for (int i = 0; i < threads_created; ++i)
-    {
-        if(!GetExitCodeThread(p_env->p_h_threads[i], &exit_code))
-        {
-            PRINT_ERROR(E_WINAPI, 0);
-            return ERR;
-        }
-
-        // thread failed - result is ERR (dont care about other threads)
-        if (exit_code != THREAD_STATUS_SUCCESS)
-            return ERR;
-    }
-
-    DBG_PRINT("wait_for_factori_threads OK\n");
-    return OK;
+    DBG_PRINT("wait_for_factori_threads=%d\n", ret_val);
+    return ret_val;
 }
 
 //==============================================================================
@@ -361,7 +353,7 @@ int cleanup_factori(struct enviroment *p_env)
             {
                 if (!CloseHandle(p_env->p_h_threads[i]))
                 {
-                    PRINT_ERROR(E_WINAPI, 0);
+                    PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
                     status = ERR;
                 }
             }
@@ -372,13 +364,13 @@ int cleanup_factori(struct enviroment *p_env)
 
     if (!CloseHandle(p_env->h_abort_evt))
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         status = ERR;
     }
     
     if (!CloseHandle(p_env->h_queue_mtx))
     {
-        PRINT_ERROR(E_WINAPI, 0);
+        PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
         status = ERR;
     }
 
