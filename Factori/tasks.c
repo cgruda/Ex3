@@ -245,7 +245,7 @@ int fill_factori_queue(struct enviroment *p_env)
 
 int create_factori_threads(struct enviroment *p_env)
 {
-    int ret_val = OK;
+    int status = OK;
     p_env->threads_created = 0;
 
     for (int i = 0; i < p_env->args.n_threads; ++i)
@@ -259,7 +259,7 @@ int create_factori_threads(struct enviroment *p_env)
         if (!p_env->p_h_threads[i])
         {
             PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
-            ret_val = OK;
+            status == ERR;
             break;
         }
 
@@ -267,11 +267,12 @@ int create_factori_threads(struct enviroment *p_env)
     }
 
     // case not all threads were created -> set abort event
-    if (p_env->threads_created < p_env->args.n_threads)
+    if (status == ERR)
         if (!SetEvent(p_env->h_abort_evt))
             PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
 
-    return ret_val;
+    // return OK since must get to wait function
+    return OK;
 }
 
 //==============================================================================
@@ -326,7 +327,7 @@ int wait_for_factori_threads(struct enviroment *p_env)
             break;
         }
         
-        // wait 20 ms
+        // wait 20 ms after abort
         if (WaitForMultipleObjects(threads_created, p_env->p_h_threads, TRUE, 20) == WAIT_FAILED)
             PRINT_ERROR(E_WINAPI, E_MSG_NULL_MSG);
 

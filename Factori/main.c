@@ -43,6 +43,7 @@ int main(int argc, char **argv)
         if (!wait_for_factori_threads(&env))
             break;
 
+        // we get here on success only
         ret_val = OK;
 
     } while (0);

@@ -3,6 +3,8 @@
  * Factori Project
  * ISP_HW_3_2020
  *
+ * This module implements the Factori thread
+ * and all its subroutines
  *
  * by: Chaim Gruda
  *     Nir Beiber
