@@ -51,5 +51,7 @@ int main(int argc, char **argv)
     if (!cleanup_factori(&env))
         ret_val = ERR;
 
+    // OK  on success
+    // ERR on any failure
     return ret_val;
 }

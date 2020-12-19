@@ -397,7 +397,7 @@ DWORD WINAPI factori_thread(LPVOID param)
         status = read_number_from_file(h_file, &p_task, &number);
 
         // release read
-        if (read_release(args->p_lock) != OK)
+        if (!read_release(args->p_lock))
             status = THREAD_STATUS_ERR;
 
         // check read_line & read_release
@@ -416,7 +416,7 @@ DWORD WINAPI factori_thread(LPVOID param)
         status = print_line_to_file(h_file, &write_buffer);
 
         // release write lock
-        if (write_release(args->p_lock) != OK)
+        if (!write_release(args->p_lock))
             status = THREAD_STATUS_ERR;
     }
 

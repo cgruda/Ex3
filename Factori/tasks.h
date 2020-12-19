@@ -120,7 +120,7 @@ struct enviroment
     HANDLE *p_h_threads;
     int threads_created;
 
-    // copy of thread args
+    // ref to thread args (for readability)
     struct Queue *p_queue;
     struct Lock  *p_lock;
     HANDLE h_queue_mtx;
@@ -167,6 +167,7 @@ void print_error(int err_val, char *err_msg);
  * @param p_env pointer to enviroment struct
  * @param argc from main
  * @param argv from main
+ * @return OK or ERR
  ******************************************************************************
  */
 int check_input(struct enviroment *p_env, int argc, char **argv);
@@ -193,7 +194,7 @@ int fill_factori_queue(struct enviroment *p_env);
  ******************************************************************************
  * @brief create all factori threads
  * @param p_env pointer to enviroment struct
- * @return OK or ERR
+ * @return always OK
  ******************************************************************************
  */
 int create_factori_threads(struct enviroment *p_env);
